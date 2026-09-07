@@ -37,44 +37,44 @@ export function FeaturedCarousel({ sessions }: FeaturedCarouselProps) {
   };
 
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden bg-slate-900 border border-slate-800 shadow-2xl">
+    <div className="relative w-full rounded-3xl overflow-hidden bg-[#1e1716] border border-[#3b2c29] shadow-2xl">
       {/* Fondo con imagen y degradado oscuro cinemático */}
       <div className="absolute inset-0 z-0">
         {activeSession.url_imagen_portada && (
           <img
             src={activeSession.url_imagen_portada}
             alt={activeSession.titulo}
-            className="w-full h-full object-cover object-center filter brightness-[0.4] transition-all duration-700 scale-105"
+            className="w-full h-full object-cover object-center filter brightness-[0.38] transition-all duration-700 scale-105"
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/70 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#140f0e] via-[#140f0e]/75 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#140f0e] via-[#140f0e]/85 to-transparent" />
       </div>
 
       {/* Contenido Hero */}
-      <div className="relative z-10 p-6 sm:p-10 md:p-12 max-w-2xl flex flex-col justify-end min-h-[340px] sm:min-h-[400px]">
+      <div className="relative z-10 p-6 sm:p-10 md:p-12 max-w-2xl flex flex-col justify-end min-h-[340px] sm:min-h-[380px]">
         <div className="flex items-center gap-2 mb-3">
-          <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-600/90 text-white text-xs font-semibold tracking-wide uppercase shadow-sm">
+          <span className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#a55850] text-white text-[11px] font-semibold tracking-wider uppercase shadow-md shadow-[#a55850]/30 font-sans-persona">
             <Sparkles className="w-3 h-3" />
-            Destacado del Día
+            Sesión Destacada
           </span>
-          <span className="text-xs text-indigo-300 font-medium bg-indigo-950/60 px-2.5 py-1 rounded-full border border-indigo-500/20">
+          <span className="text-xs text-[#d8aba1] font-medium bg-[#140f0e]/80 px-2.5 py-1 rounded-full border border-[#3b2c29]">
             {activeSession.categoria?.nombre || 'Bienestar'}
           </span>
         </div>
 
-        <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+        <h2 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight leading-tight">
           {activeSession.titulo}
         </h2>
 
-        <p className="text-sm sm:text-base text-slate-300 mt-2 line-clamp-3 leading-relaxed">
+        <p className="text-xs sm:text-sm text-[#c7b9b4] mt-2.5 line-clamp-2 sm:line-clamp-3 leading-relaxed font-light">
           {activeSession.descripcion}
         </p>
 
         <div className="flex flex-wrap items-center gap-4 mt-6">
           <button
             onClick={handlePlayClick}
-            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95"
+            className="flex items-center gap-2.5 px-6 py-3 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-xs tracking-wide shadow-xl shadow-[#a55850]/30 transition-all hover:scale-105 active:scale-95"
           >
             {isCurrentPlaying ? (
               <>
@@ -87,11 +87,11 @@ export function FeaturedCarousel({ sessions }: FeaturedCarouselProps) {
             )}
           </button>
 
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <Clock className="w-4 h-4 text-slate-400" />
-            <span>{durationMinutes} minutos de duración</span>
+          <div className="flex items-center gap-2 text-xs text-[#a89b97]">
+            <Clock className="w-4 h-4 text-[#b98d76]" />
+            <span>{durationMinutes} min de reprogramación</span>
             <span>•</span>
-            <span>{activeSession.guia_o_autor}</span>
+            <span className="text-[#d8aba1]">{activeSession.guia_o_autor}</span>
           </div>
         </div>
       </div>
@@ -101,14 +101,17 @@ export function FeaturedCarousel({ sessions }: FeaturedCarouselProps) {
         <div className="absolute bottom-6 right-6 z-20 flex items-center gap-2">
           <button
             onClick={handlePrev}
-            className="p-2.5 rounded-full bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-colors shadow-md"
+            className="p-2.5 rounded-full bg-[#140f0e]/80 hover:bg-[#251d1c] text-[#ece5e2] hover:text-white border border-[#3b2c29] transition-colors shadow-md"
             title="Anterior"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
+          <span className="text-xs text-[#a89b97] px-1 font-mono">
+            {currentIndex + 1} / {sessions.length}
+          </span>
           <button
             onClick={handleNext}
-            className="p-2.5 rounded-full bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 transition-colors shadow-md"
+            className="p-2.5 rounded-full bg-[#140f0e]/80 hover:bg-[#251d1c] text-[#ece5e2] hover:text-white border border-[#3b2c29] transition-colors shadow-md"
             title="Siguiente"
           >
             <ChevronRight className="w-4 h-4" />

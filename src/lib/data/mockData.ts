@@ -133,5 +133,35 @@ export const MOCK_SESIONES: Sesion[] = [
     guia_o_autor: 'Lic. Rodrigo Silva',
     veces_reproducida: 3110,
     created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+  },
+  {
+    id: 'ses-7',
+    titulo: 'Regeneración Celular y Desconexión Nocturna Profunda',
+    descripcion: 'Inducción de ondas delta con visualización de sanación celular. Ideal para noches de alta tensión o después de un día agotador.',
+    id_categoria: 'cat-2',
+    categoria: MOCK_CATEGORIAS[1],
+    duracion: 1500, // 25 min
+    url_archivo_multimedia: 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
+    url_imagen_portada: 'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=800&q=80',
+    tipo_multimedia: 'audio',
+    destacado: true,
+    guia_o_autor: 'Dra. Valentina Montes',
+    veces_reproducida: 2540,
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+  },
+  {
+    id: 'ses-8',
+    titulo: 'Disolver el Miedo al Juicio y Liberar tu Potencial',
+    descripcion: 'Técnica de desensibilización cognitiva para apagar la rumiación social, liberar la voz propia y proyectar seguridad natural.',
+    id_categoria: 'cat-3',
+    categoria: MOCK_CATEGORIAS[2],
+    duracion: 960, // 16 min
+    url_archivo_multimedia: 'https://cdn.freesound.org/previews/415/415843_6142149-lq.mp3',
+    url_imagen_portada: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
+    tipo_multimedia: 'audio',
+    destacado: false,
+    guia_o_autor: 'Lic. Rodrigo Silva',
+    veces_reproducida: 1790,
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
   }
 ];

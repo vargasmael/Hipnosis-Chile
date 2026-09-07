@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePlayer } from '@/context/PlayerContext';
+import { useAuth } from '@/context/AuthContext';
+import { toggleFavorito } from '@/lib/services/contentService';
 import {
   Play,
   Pause,
@@ -9,12 +11,12 @@ import {
   RotateCw,
   Volume2,
   VolumeX,
-  Maximize2,
   ChevronDown,
   Sparkles,
   Heart,
   X,
-  Video
+  Video,
+  Maximize2
 } from 'lucide-react';
 
 function formatSeconds(secs: number): string {
@@ -42,14 +44,38 @@ export function FloatingPlayer() {
     closePlayer,
   } = usePlayer();
 
+  const { user } = useAuth();
   const [isMuted, setIsMuted] = useState(false);
   const [prevVolume, setPrevVolume] = useState(1);
   const [isFavorited, setIsFavorited] = useState(false);
+
+  // Cargar estado de favorito inicial cuando cambia la sesión
+  useEffect(() => {
+    if (typeof window !== 'undefined' && currentSession) {
+      try {
+        const saved = localStorage.getItem('reprograma_favoritos_ids');
+        if (saved) {
+          const ids: string[] = JSON.parse(saved);
+          setIsFavorited(ids.includes(currentSession.id));
+        } else {
+          setIsFavorited(false);
+        }
+      } catch {
+        setIsFavorited(false);
+      }
+    }
+  }, [currentSession]);
 
   if (!currentSession) return null;
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const isVideo = currentSession.tipo_multimedia === 'video';
+
+  const handleFavoriteToggle = async () => {
+    const newState = !isFavorited;
+    setIsFavorited(newState);
+    await toggleFavorito(user?.id || 'demo_user', currentSession.id, newState);
+  };
 
   const handleMuteToggle = () => {
     if (isMuted) {
@@ -69,325 +95,241 @@ export function FloatingPlayer() {
     setPlaybackRate(nextRate);
   };
 
-  // Helper para procesar URLs de video (Cloudflare Stream, Vimeo, R2 o Google Drive)
-  const getVideoEmbedUrl = (url: string) => {
-    if (!url) return '';
-    // Google Drive: convertir view a preview para que funcione el reproductor
-    if (url.includes('drive.google.com')) {
-      return url.replace(/\/view(\?.*)?$/, '/preview');
-    }
-    // YouTube
-    if (url.includes('youtube.com/watch?v=')) {
-      return url.replace('watch?v=', 'embed/');
-    }
-    if (url.includes('youtu.be/')) {
-      return url.replace('youtu.be/', 'youtube.com/embed/');
-    }
-    return url;
-  };
-
-  const isEmbedVideo =
-    isVideo &&
-    (currentSession.url_archivo_multimedia.includes('drive.google.com') ||
-      currentSession.url_archivo_multimedia.includes('youtube') ||
-      currentSession.url_archivo_multimedia.includes('vimeo') ||
-      currentSession.url_archivo_multimedia.includes('iframe'));
-
   return (
     <>
       {/* ------------------------------------------------------------- */}
-      {/* REPRODUCTOR FLOTANTE DOCK (MINI-PLAYER FIJO INFERIOR)          */}
+      {/* 1. MINI REPRODUCTOR FLOTANTE INFERIOR                         */}
       {/* ------------------------------------------------------------- */}
-      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40 bg-slate-950/90 backdrop-blur-xl border-t border-slate-800/80 px-4 py-2.5 shadow-2xl transition-all">
-        {/* Barra fina de progreso superior interactiva */}
-        <div
-          className="absolute -top-1 left-0 right-0 h-1.5 bg-slate-800 cursor-pointer group"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const clickPos = (e.clientX - rect.left) / rect.width;
-            seekTo(clickPos * duration);
-          }}
-        >
+      <div className="fixed bottom-16 md:bottom-3 left-0 right-0 md:left-4 md:right-4 z-30 max-w-4xl md:mx-auto">
+        <div className="bg-[#1a1312]/95 backdrop-blur-2xl border border-[#3b2c29] md:rounded-3xl px-4 py-2.5 shadow-2xl transition-all relative overflow-hidden">
+          {/* Barra fina de progreso superior */}
           <div
-            className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-teal-400 relative"
-            style={{ width: `${progressPercent}%` }}
+            className="absolute top-0 left-0 right-0 h-1 bg-[#2d2220] cursor-pointer group"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const clickPos = (e.clientX - rect.left) / rect.width;
+              seekTo(clickPos * duration);
+            }}
           >
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md" />
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
-          {/* Carátula y Título */}
-          <div
-            className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-            onClick={() => setIsExpanded(true)}
-          >
-            <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-800 shrink-0 shadow-inner">
-              {currentSession.url_imagen_portada ? (
-                <img
-                  src={currentSession.url_imagen_portada}
-                  alt={currentSession.titulo}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-indigo-950 text-indigo-400">
-                  {isVideo ? <Video className="w-5 h-5" /> : <Sparkles className="w-5 h-5" />}
-                </div>
-              )}
-              {isVideo && (
-                <div className="absolute bottom-1 right-1 px-1 rounded bg-black/70 text-[9px] text-teal-400 font-bold">
-                  VIDEO
-                </div>
-              )}
-            </div>
-            <div className="min-w-0 pr-2">
-              <h4 className="text-sm font-medium text-white truncate hover:text-indigo-300 transition-colors">
-                {currentSession.titulo}
-              </h4>
-              <p className="text-xs text-slate-400 truncate">
-                {currentSession.guia_o_autor || 'Hipnosis Chile'}
-              </p>
-            </div>
+            <div
+              className="h-full bg-gradient-to-r from-[#a55850] to-[#b98d76] relative transition-all duration-150"
+              style={{ width: `${progressPercent}%` }}
+            />
           </div>
 
-          {/* Controles Principales */}
-          <div className="flex items-center gap-2 md:gap-4 shrink-0">
-            <button
-              onClick={() => skip(-15)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
-              title="Retroceder 15 segundos"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </button>
-
-            <button
-              onClick={togglePlay}
-              className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 transition-transform active:scale-95"
-              title={isPlaying ? 'Pausar' : 'Reproducir'}
-            >
-              {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
-            </button>
-
-            <button
-              onClick={() => skip(15)}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
-              title="Avanzar 15 segundos"
-            >
-              <RotateCw className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Tiempo y Opciones (Desktop) */}
-          <div className="hidden md:flex items-center gap-4 shrink-0">
-            <span className="text-xs font-mono text-slate-400">
-              {formatSeconds(currentTime)} / {formatSeconds(duration)}
-            </span>
-
-            {/* Velocidad */}
-            <button
-              onClick={handleNextRate}
-              className="px-2 py-0.5 text-xs font-semibold rounded bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
-              title="Cambiar velocidad de reproducción"
-            >
-              {playbackRate}x
-            </button>
-
-            {/* Volumen */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleMuteToggle}
-                className="text-slate-400 hover:text-white transition-colors"
-              >
-                {volume === 0 || isMuted ? (
-                  <VolumeX className="w-4 h-4" />
-                ) : (
-                  <Volume2 className="w-4 h-4" />
-                )}
-              </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={isMuted ? 0 : volume}
-                onChange={(e) => {
-                  setIsMuted(false);
-                  setVolume(parseFloat(e.target.value));
-                }}
-                className="w-16 h-1 accent-indigo-500 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-              />
-            </div>
-
-            {/* Maximizar */}
-            <button
+          <div className="flex items-center justify-between gap-3">
+            {/* Carátula y Título (Tocar expande el modal) */}
+            <div
+              className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
               onClick={() => setIsExpanded(true)}
-              className="p-1.5 text-slate-400 hover:text-white transition-colors"
-              title="Pantalla completa"
             >
-              <Maximize2 className="w-4 h-4" />
-            </button>
+              <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-[#2d2220] shrink-0 shadow-md">
+                {currentSession.url_imagen_portada ? (
+                  <img
+                    src={currentSession.url_imagen_portada}
+                    alt={currentSession.titulo}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-[#251d1c] text-[#a55850]">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 pr-2">
+                <h4 className="font-serif-persona text-sm font-normal text-[#fbf7f4] truncate hover:text-[#d8aba1] transition-colors">
+                  {currentSession.titulo}
+                </h4>
+                <p className="text-[11px] text-[#a89b97] truncate font-light">
+                  {currentSession.guia_o_autor || 'Re-Programa'}
+                </p>
+              </div>
+            </div>
 
-            {/* Cerrar */}
-            <button
-              onClick={closePlayer}
-              className="p-1.5 text-slate-400 hover:text-red-400 transition-colors"
-              title="Cerrar reproductor"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {/* Controles rápidos */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => skip(-15)}
+                className="p-2 text-[#a89b97] hover:text-white transition-colors"
+                title="Retroceder 15 segundos"
+                aria-label="Retroceder 15 segundos"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={togglePlay}
+                className="w-10 h-10 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shadow-lg shadow-[#a55850]/30 transition-transform active:scale-95"
+                title={isPlaying ? 'Pausar' : 'Reproducir'}
+                aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+              >
+                {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+              </button>
+
+              <button
+                onClick={() => skip(15)}
+                className="p-2 text-[#a89b97] hover:text-white transition-colors"
+                title="Avanzar 15 segundos"
+                aria-label="Avanzar 15 segundos"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => setIsExpanded(true)}
+                className="hidden sm:flex p-2 text-[#a89b97] hover:text-white transition-colors"
+                title="Maximizar reproductor"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={closePlayer}
+                className="p-2 text-[#7d6f6b] hover:text-rose-400 transition-colors"
+                title="Cerrar reproductor"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------- */}
-      {/* MODAL EXPANDIDO COMPLETO (AUDIO Y VIDEO EN PANTALLA COMPLETA) */}
+      {/* 2. MODAL / BOTTOM SHEET EXPANDIDO (TIPO SPOTIFY)              */}
       {/* ------------------------------------------------------------- */}
       {isExpanded && (
-        <div className="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-2xl flex flex-col justify-between p-4 sm:p-8 animate-in fade-in duration-300 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-[#140f0e]/98 backdrop-blur-3xl flex flex-col justify-between p-6 sm:p-10 animate-in slide-in-from-bottom duration-300 overflow-y-auto font-sans-persona">
           {/* Barra superior modal */}
-          <div className="flex items-center justify-between max-w-4xl mx-auto w-full mb-4">
+          <div className="flex items-center justify-between max-w-lg mx-auto w-full">
             <button
               onClick={() => setIsExpanded(false)}
-              className="p-2.5 rounded-full bg-slate-900/80 text-slate-300 hover:text-white border border-slate-800 transition-colors"
+              className="p-3 rounded-full bg-[#1e1716] text-[#ece5e2] hover:text-white border border-[#3b2c29] transition-colors"
+              aria-label="Minimizar reproductor"
             >
-              <ChevronDown className="w-6 h-6" />
+              <ChevronDown className="w-5 h-5" />
             </button>
 
             <div className="text-center">
-              <span className="text-xs uppercase tracking-widest text-indigo-400 font-semibold">
-                {isVideo ? 'Sesión en Video' : 'Reproduciendo Audio'}
+              <span className="text-[11px] uppercase tracking-widest text-[#b98d76] font-semibold block font-sans-persona">
+                Reproduciendo Ahora
               </span>
-              <p className="text-xs text-slate-400">
-                {currentSession.categoria?.nombre || 'Hipnosis Chile'}
+              <p className="text-xs text-[#a89b97] font-light">
+                {currentSession.categoria?.nombre || 'Sesión Guiada'}
               </p>
             </div>
 
             <button
-              onClick={() => setIsFavorited(!isFavorited)}
-              className={`p-2.5 rounded-full bg-slate-900/80 border border-slate-800 transition-colors ${
-                isFavorited ? 'text-rose-500' : 'text-slate-400 hover:text-white'
+              onClick={handleFavoriteToggle}
+              className={`p-3 rounded-full bg-[#1e1716] border border-[#3b2c29] transition-colors ${
+                isFavorited ? 'text-[#a55850]' : 'text-[#a89b97] hover:text-white'
               }`}
+              aria-label="Marcar como favorito"
             >
               <Heart className={`w-5 h-5 ${isFavorited ? 'fill-current' : ''}`} />
             </button>
           </div>
 
-          {/* REPRODUCTOR CENTRAL: VIDEO O AUDIO */}
-          <div className="max-w-3xl mx-auto w-full my-auto flex flex-col items-center">
-            {isVideo ? (
-              <div className="w-full aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl border border-indigo-500/20 relative">
-                {isEmbedVideo ? (
-                  <iframe
-                    src={getVideoEmbedUrl(currentSession.url_archivo_multimedia)}
-                    className="w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video
-                    src={currentSession.url_archivo_multimedia}
-                    controls
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-contain"
-                  />
-                )}
-              </div>
-            ) : (
-              <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border border-indigo-500/20 group">
-                {isPlaying && (
-                  <div className="absolute inset-0 bg-indigo-500/20 rounded-3xl animate-ping opacity-30 pointer-events-none" />
-                )}
-                {currentSession.url_imagen_portada ? (
-                  <img
-                    src={currentSession.url_imagen_portada}
-                    alt={currentSession.titulo}
-                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-950 flex items-center justify-center text-indigo-300">
-                    <Sparkles className="w-16 h-16 animate-pulse" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
-              </div>
-            )}
+          {/* Carátula Grande Central y Detalles */}
+          <div className="max-w-md mx-auto w-full my-auto flex flex-col items-center py-6">
+            <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border-2 border-[#3b2c29] group">
+              {isPlaying && (
+                <div className="absolute inset-0 bg-[#a55850]/15 rounded-3xl animate-ping opacity-25 pointer-events-none" />
+              )}
+              {currentSession.url_imagen_portada ? (
+                <img
+                  src={currentSession.url_imagen_portada}
+                  alt={currentSession.titulo}
+                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-full h-full bg-[#1e1716] flex items-center justify-center text-[#a55850]">
+                  <Sparkles className="w-16 h-16 animate-pulse" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#140f0e]/80 via-transparent to-transparent" />
+            </div>
 
-            <div className="mt-6 text-center max-w-lg">
-              <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            <div className="mt-8 text-center max-w-sm">
+              <h2 className="font-serif-persona text-2xl sm:text-3xl font-normal text-[#fbf7f4] tracking-tight">
                 {currentSession.titulo}
               </h2>
-              <p className="text-sm text-indigo-300 mt-1">
-                {currentSession.guia_o_autor || 'Hipnosis Chile'}
+              <p className="text-sm text-[#b98d76] mt-1.5 font-medium">
+                {currentSession.guia_o_autor || 'Re-Programa'}
               </p>
-              <p className="text-xs text-slate-400 mt-2 line-clamp-2">
+              <p className="text-xs text-[#a89b97] mt-2.5 line-clamp-2 font-light leading-relaxed">
                 {currentSession.descripcion}
               </p>
             </div>
           </div>
 
-          {/* Controles expandidos inferiores (para sesiones de audio o video directo) */}
-          {!isEmbedVideo && (
-            <div className="max-w-xl mx-auto w-full pb-4 mt-4">
-              {/* Slider de tiempo */}
-              <div className="space-y-1.5 mb-6">
-                <input
-                  type="range"
-                  min="0"
-                  max={duration || 100}
-                  value={currentTime}
-                  onChange={(e) => seekTo(parseFloat(e.target.value))}
-                  className="w-full h-2 accent-indigo-500 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs font-mono text-slate-400">
-                  <span>{formatSeconds(currentTime)}</span>
-                  <span>{formatSeconds(duration)}</span>
-                </div>
-              </div>
-
-              {/* Botonera de control central */}
-              <div className="flex items-center justify-center gap-6 sm:gap-8">
-                <button
-                  onClick={handleNextRate}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
-                >
-                  {playbackRate}x
-                </button>
-
-                <button
-                  onClick={() => skip(-15)}
-                  className="p-3 text-slate-300 hover:text-white transition-transform active:scale-90"
-                >
-                  <RotateCcw className="w-6 h-6" />
-                </button>
-
-                <button
-                  onClick={togglePlay}
-                  className="w-16 h-16 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/40 transition-transform active:scale-95"
-                >
-                  {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
-                </button>
-
-                <button
-                  onClick={() => skip(15)}
-                  className="p-3 text-slate-300 hover:text-white transition-transform active:scale-90"
-                >
-                  <RotateCw className="w-6 h-6" />
-                </button>
-
-                <button
-                  onClick={handleMuteToggle}
-                  className="p-3 text-slate-400 hover:text-white"
-                >
-                  {volume === 0 || isMuted ? (
-                    <VolumeX className="w-5 h-5" />
-                  ) : (
-                    <Volume2 className="w-5 h-5" />
-                  )}
-                </button>
+          {/* Controles de Reproducción y Scrubbing */}
+          <div className="max-w-md mx-auto w-full pb-4">
+            {/* Barra de progreso simulada/interactiva */}
+            <div className="space-y-2 mb-8">
+              <input
+                type="range"
+                min="0"
+                max={duration || 100}
+                value={currentTime}
+                onChange={(e) => seekTo(parseFloat(e.target.value))}
+                className="w-full h-2 accent-[#a55850] bg-[#2d2220] rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs font-mono text-[#a89b97]">
+                <span>{formatSeconds(currentTime)}</span>
+                <span>{formatSeconds(duration)}</span>
               </div>
             </div>
-          )}
+
+            {/* Botones de Control Principal */}
+            <div className="flex items-center justify-between px-4">
+              <button
+                onClick={handleNextRate}
+                className="px-3 py-1 text-xs font-semibold rounded-full bg-[#1e1716] border border-[#3b2c29] text-[#b98d76] hover:text-white transition-colors"
+                title="Velocidad"
+              >
+                {playbackRate}x
+              </button>
+
+              <button
+                onClick={() => skip(-15)}
+                className="p-3 text-[#ece5e2] hover:text-white transition-transform active:scale-90"
+                title="Retroceder 15s"
+                aria-label="Retroceder 15 segundos"
+              >
+                <RotateCcw className="w-7 h-7" />
+              </button>
+
+              <button
+                onClick={togglePlay}
+                className="w-18 h-18 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shadow-2xl shadow-[#a55850]/40 transition-transform active:scale-95 border border-[#a55850]"
+                aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
+              >
+                {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
+              </button>
+
+              <button
+                onClick={() => skip(15)}
+                className="p-3 text-[#ece5e2] hover:text-white transition-transform active:scale-90"
+                title="Avanzar 15s"
+                aria-label="Avanzar 15 segundos"
+              >
+                <RotateCw className="w-7 h-7" />
+              </button>
+
+              <button
+                onClick={handleMuteToggle}
+                className="p-3 text-[#a89b97] hover:text-white transition-colors"
+                aria-label={isMuted ? 'Activar sonido' : 'Silenciar'}
+              >
+                {volume === 0 || isMuted ? (
+                  <VolumeX className="w-5 h-5 text-rose-400" />
+                ) : (
+                  <Volume2 className="w-5 h-5 text-[#b98d76]" />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

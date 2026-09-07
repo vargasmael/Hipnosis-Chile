@@ -36,6 +36,7 @@ export interface Sesion {
   destacado: boolean;
   guia_o_autor: string;
   veces_reproducida?: number;
+  tags?: string[];
   created_at: string;
   updated_at?: string;
 }

@@ -110,6 +110,23 @@ export async function toggleFavorito(
   sesionId: string,
   nuevoEstado: boolean
 ): Promise<boolean> {
+  // Persistir en localStorage para modo simulado / mock
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('reprograma_favoritos_ids');
+      let ids: string[] = saved ? JSON.parse(saved) : ['ses-1', 'ses-2'];
+      if (nuevoEstado) {
+        if (!ids.includes(sesionId)) ids.push(sesionId);
+      } else {
+        ids = ids.filter((id) => id !== sesionId);
+      }
+      localStorage.setItem('reprograma_favoritos_ids', JSON.stringify(ids));
+      window.dispatchEvent(new Event('reprograma_favoritos_updated'));
+    } catch {
+      // ignore
+    }
+  }
+
   if (!userId || !sesionId) return nuevoEstado;
 
   try {
@@ -126,5 +143,43 @@ export async function toggleFavorito(
     return !error;
   } catch {
     return nuevoEstado;
+  }
+}
+
+/**
+ * Obtiene la lista de sesiones favoritas
+ */
+export async function getFavoritos(userId?: string): Promise<Sesion[]> {
+  try {
+    let favoriteIds: string[] = ['ses-1', 'ses-2'];
+
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('reprograma_favoritos_ids');
+      if (saved) {
+        favoriteIds = JSON.parse(saved);
+      }
+    }
+
+    if (userId) {
+      try {
+        const supabase = createBrowserClient();
+        const { data } = await supabase
+          .from('progreso_favoritos')
+          .select('id_sesion')
+          .eq('id_usuario', userId)
+          .eq('es_favorito', true);
+
+        if (data && data.length > 0) {
+          favoriteIds = data.map((d: any) => d.id_sesion);
+        }
+      } catch {
+        // continue with local fallback
+      }
+    }
+
+    const allSessions = await getSesiones();
+    return allSessions.filter((s) => favoriteIds.includes(s.id));
+  } catch {
+    return MOCK_SESIONES.slice(0, 2);
   }
 }
