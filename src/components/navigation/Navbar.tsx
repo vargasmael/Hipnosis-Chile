@@ -35,7 +35,7 @@ export function Navbar() {
     <header className="sticky top-0 z-30 w-full bg-[#140f0e]/90 backdrop-blur-md border-b border-[#2d2220]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* LOGO */}
-        <Link href={user ? '/biblioteca' : '/'} className="flex items-center gap-2.5 group">
+        <Link href={user ? '/dashboard' : '/'} className="flex items-center gap-2.5 group">
           <div className="w-9 h-9 rounded-xl bg-[#a55850] p-0.5 shadow-md shadow-[#a55850]/20 group-hover:scale-105 transition-transform flex items-center justify-center">
             <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
           </div>
@@ -54,11 +54,21 @@ export function Navbar() {
           {user ? (
             <>
               <Link
+                href="/dashboard"
+                className={`transition-colors ${
+                  pathname === '/dashboard'
+                    ? 'text-[#b98d76] font-semibold'
+                    : 'text-[#a89b97] hover:text-[#fbf7f4]'
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link
                 href="/biblioteca"
                 className={`transition-colors ${
                   pathname === '/biblioteca'
-                    ? 'text-indigo-400 font-semibold'
-                    : 'text-slate-300 hover:text-white'
+                    ? 'text-[#b98d76] font-semibold'
+                    : 'text-[#a89b97] hover:text-[#fbf7f4]'
                 }`}
               >
                 Biblioteca

@@ -16,6 +16,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function syncUserCookies(u: Usuario | null) {
+  if (typeof document === 'undefined') return;
+  if (u) {
+    document.cookie = `reprograma_auth=true; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `reprograma_sub=${u.estado_suscripcion}; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `reprograma_role=${u.rol}; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `reprograma_user_id=${u.id}; path=/; max-age=2592000; SameSite=Lax`;
+  } else {
+    document.cookie = `reprograma_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    document.cookie = `reprograma_sub=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    document.cookie = `reprograma_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    document.cookie = `reprograma_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,10 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (data && !error) {
-        setUser(data as Usuario);
+        const u = data as Usuario;
+        setUser(u);
+        syncUserCookies(u);
       } else {
         // Usuario autenticado pero sin fila aún en 'usuarios'
-        setUser({
+        const u: Usuario = {
           id: authUserId,
           email,
           nombre_completo: email.split('@')[0],
@@ -42,11 +59,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           rol: 'user',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        });
+        };
+        setUser(u);
+        syncUserCookies(u);
       }
     } catch {
       // Fallback
-      setUser({
+      const u: Usuario = {
         id: authUserId,
         email,
         nombre_completo: email.split('@')[0],
@@ -54,7 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         rol: 'user',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      };
+      setUser(u);
+      syncUserCookies(u);
     }
   };
 
@@ -202,6 +223,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
+    syncUserCookies(null);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('hipnosis_demo_user');
     }
@@ -217,8 +239,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setDemoUser = (estado: EstadoSuscripcion, rol: RolUsuario = 'user') => {
     const demo: Usuario = {
       id: `demo_${rol}_${Date.now()}`,
-      email: `${rol === 'admin' ? 'admin' : 'suscriptor'}@hipnosischile.cl`,
-      nombre_completo: rol === 'admin' ? 'Administrador Hipnosis Chile' : 'Mael Suscriptor',
+      email: `${rol === 'admin' ? 'admin' : 'suscriptor'}@reprograma.cl`,
+      nombre_completo: rol === 'admin' ? 'Administrador Re-Programa' : 'Mael Suscriptor',
       estado_suscripcion: estado,
       rol,
       id_suscripcion_mercadopago: estado === 'activa' ? 'mp_sub_123456789' : null,
@@ -226,6 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updated_at: new Date().toISOString(),
     };
     setUser(demo);
+    syncUserCookies(demo);
     if (typeof window !== 'undefined') {
       localStorage.setItem('hipnosis_demo_user', JSON.stringify(demo));
     }

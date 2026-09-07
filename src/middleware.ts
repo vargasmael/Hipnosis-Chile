@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Rutas públicas que no requieren ninguna autenticación
+  // 1. Rutas públicas que no requieren ninguna autenticación
   const isPublicRoute =
     pathname === '/' ||
     pathname.startsWith('/login') ||
@@ -20,7 +20,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Comprobar cookies de sesión de Supabase
+  // Rutas que requieren protección: /dashboard, /biblioteca, /favoritos, /admin, /perfil
+  const isProtectedRoute =
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/biblioteca') ||
+    pathname.startsWith('/favoritos') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/perfil');
+
+  if (!isProtectedRoute) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -30,11 +41,43 @@ export async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-  // Si no hay configuración activa de Supabase (modo local/demo), permitir navegación
+  // Verificar si hay cookies de sesión demo/locales
+  const demoAuthCookie = request.cookies.get('reprograma_auth')?.value;
+  const demoSubCookie = request.cookies.get('reprograma_sub')?.value;
+  const demoRoleCookie = request.cookies.get('reprograma_role')?.value;
+
+  // Si Supabase es placeholder o no está conectado, usar cookies de sesión local
   if (!supabaseUrl || supabaseUrl.includes('placeholder')) {
+    // 1. No autenticado -> Redirigir a /login
+    if (!demoAuthCookie) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    const isAdmin = demoRoleCookie === 'admin';
+    const isSubActive = demoSubCookie === 'activa';
+
+    // 2. Proteger /admin -> Solo admin
+    if (pathname.startsWith('/admin') && !isAdmin) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
+
+    // 3. Proteger /dashboard, /biblioteca, /favoritos -> Requiere suscripción activa
+    if (
+      (pathname.startsWith('/dashboard') ||
+        pathname.startsWith('/biblioteca') ||
+        pathname.startsWith('/favoritos')) &&
+      !isSubActive &&
+      !isAdmin
+    ) {
+      return NextResponse.redirect(new URL('/suscripcion', request.url));
+    }
+
     return response;
   }
 
+  // Si Supabase sí está configurado con credenciales reales:
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
@@ -58,32 +101,46 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 1. Si no hay usuario logueado -> Redirigir a /login
-  if (!user) {
+  // 1. Si no hay usuario logueado en Supabase ni en cookie local -> Redirigir a /login
+  if (!user && !demoAuthCookie) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 2. Verificar datos de perfil (rol y estado_suscripcion)
-  const { data: profile } = await supabase
-    .from('usuarios')
-    .select('estado_suscripcion, rol')
-    .eq('id', user.id)
-    .single();
+  let estadoSuscripcion = demoSubCookie || 'inactiva';
+  let rol = demoRoleCookie || 'user';
 
-  // 3. Proteger rutas administrativas (/admin/*)
-  if (pathname.startsWith('/admin')) {
-    if (!profile || profile.rol !== 'admin') {
-      return NextResponse.redirect(new URL('/biblioteca', request.url));
+  if (user) {
+    const { data: profile } = await supabase
+      .from('usuarios')
+      .select('estado_suscripcion, rol')
+      .eq('id', user.id)
+      .single();
+
+    if (profile) {
+      estadoSuscripcion = profile.estado_suscripcion;
+      rol = profile.rol;
     }
   }
 
-  // 4. Proteger rutas privadas de streaming (/biblioteca, /favoritos, etc.)
-  if (pathname.startsWith('/biblioteca') || pathname.startsWith('/favoritos')) {
-    if (profile && profile.estado_suscripcion !== 'activa' && profile.rol !== 'admin') {
-      return NextResponse.redirect(new URL('/suscripcion', request.url));
-    }
+  const isAdmin = rol === 'admin';
+  const isSubActive = estadoSuscripcion === 'activa';
+
+  // 2. Proteger rutas administrativas (/admin/*)
+  if (pathname.startsWith('/admin') && !isAdmin) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // 3. Proteger rutas privadas de streaming (/dashboard, /biblioteca, /favoritos)
+  if (
+    (pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/biblioteca') ||
+      pathname.startsWith('/favoritos')) &&
+    !isSubActive &&
+    !isAdmin
+  ) {
+    return NextResponse.redirect(new URL('/suscripcion', request.url));
   }
 
   return response;
