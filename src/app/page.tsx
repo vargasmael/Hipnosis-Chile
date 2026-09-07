@@ -359,10 +359,10 @@ export default function LandingPage() {
           </p>
 
           {/* Tarjeta de Precio Estilo Persona */}
-          <div className="mt-14 max-w-lg mx-auto p-8 sm:p-12 pb-10 rounded-3xl bg-[#1e1716] border-2 border-[#a55850]/60 shadow-2xl relative backdrop-blur-md">
-            {/* Tag destacado */}
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 rounded-full bg-[#a55850] text-[11px] font-bold uppercase tracking-widest text-white shadow-xl shadow-[#a55850]/30 border border-[#b8665d] whitespace-nowrap z-10">
-              Membresía Ilimitada
+          <div className="relative mt-12 max-w-lg mx-auto rounded-2xl border border-[#a55850]/60 bg-[#1e1716] p-8 sm:p-10 shadow-2xl">
+            {/* Globo/Badge */}
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 whitespace-nowrap px-6 py-1.5 rounded-full bg-[#a55850] text-[11px] font-bold uppercase tracking-widest text-white shadow-xl shadow-[#a55850]/30 border border-[#b8665d]">
+              MEMBRESÍA ILIMITADA
             </div>
 
             <div className="mt-4 flex items-baseline justify-center gap-1.5">
@@ -371,7 +371,7 @@ export default function LandingPage() {
             </div>
 
             <p className="text-xs text-[#d8aba1] mt-2 font-medium">
-              Menos de $330 al día {'\u2022'} Más económico que un café a la semana
+              Menos de $330 al día • Más económico que un café a la semana
             </p>
 
             <div className="my-6 border-t border-[#2d2220]" />
@@ -412,7 +412,7 @@ export default function LandingPage() {
             {/* Garantía de Seguridad */}
             <div className="pt-2 flex items-center justify-center gap-2 text-xs text-[#a89b97]">
               <Lock className="w-3.5 h-3.5 text-[#b98d76]" />
-              <span>Cobro seguro procesado con Mercado Pago {'\u2022'} Sin permanencia</span>
+              <span>Cobro seguro procesado con Mercado Pago • Sin permanencia</span>
             </div>
           </div>
         </div>
