@@ -359,9 +359,9 @@ export default function LandingPage() {
           </p>
 
           {/* Tarjeta de Precio Estilo Persona */}
-          <div className="mt-12 max-w-lg mx-auto p-8 sm:p-10 rounded-3xl bg-[#1e1716] border-2 border-[#a55850]/50 shadow-2xl relative overflow-hidden backdrop-blur-md">
+          <div className="mt-14 max-w-lg mx-auto p-8 sm:p-12 pb-10 rounded-3xl bg-[#1e1716] border-2 border-[#a55850]/60 shadow-2xl relative backdrop-blur-md">
             {/* Tag destacado */}
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-5 py-1 rounded-full bg-[#a55850] text-[11px] font-bold uppercase tracking-widest text-white shadow-lg">
+            <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-1.5 rounded-full bg-[#a55850] text-[11px] font-bold uppercase tracking-widest text-white shadow-xl shadow-[#a55850]/30 border border-[#b8665d] whitespace-nowrap z-10">
               Membresía Ilimitada
             </div>
 
@@ -371,13 +371,13 @@ export default function LandingPage() {
             </div>
 
             <p className="text-xs text-[#d8aba1] mt-2 font-medium">
-              Menos de $330 al día  Más económico que un café a la semana
+              Menos de $330 al día {'\u2022'} Más económico que un café a la semana
             </p>
 
             <div className="my-6 border-t border-[#2d2220]" />
 
             {/* Lista de beneficios */}
-            <ul className="space-y-3.5 text-left text-sm text-[#ece5e2]">
+            <ul className="space-y-4 text-left text-sm text-[#ece5e2]">
               <li className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-[#b98d76] shrink-0 mt-0.5" />
                 <span>Acceso 24/7 sin límites a toda la biblioteca de reprogramación</span>
@@ -403,16 +403,16 @@ export default function LandingPage() {
             {/* Botón CTA de Cierre */}
             <Link
               href="/registro"
-              className="mt-8 w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-base shadow-xl shadow-[#a55850]/30 transition-all hover:scale-[1.02] active:scale-95 border border-[#a55850]"
+              className="mt-10 mb-4 w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-base shadow-xl shadow-[#a55850]/30 transition-all hover:scale-[1.02] active:scale-95 border border-[#a55850]"
             >
               <span>Quiero Re-Programar mi mente</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
             {/* Garantía de Seguridad */}
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#a89b97]">
+            <div className="pt-2 flex items-center justify-center gap-2 text-xs text-[#a89b97]">
               <Lock className="w-3.5 h-3.5 text-[#b98d76]" />
-              <span>Cobro seguro procesado con Mercado Pago  Sin permanencia</span>
+              <span>Cobro seguro procesado con Mercado Pago {'\u2022'} Sin permanencia</span>
             </div>
           </div>
         </div>
