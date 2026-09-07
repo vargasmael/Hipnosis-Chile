@@ -1,26 +1,47 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Persona Psychology & Counseling Palette */
+  --persona-bg: #140f0e;
+  --persona-surface: #1c1514;
+  --persona-card: #231b1a;
+  --persona-card-hover: #2b2120;
+  --persona-border: #3b2c29;
+  --persona-border-subtle: #2d2220;
+  --persona-accent: #a55850;
+  --persona-accent-hover: #b8665d;
+  --persona-accent-2: #b98d76;
+  --persona-accent-2-hover: #cb9f88;
+  --persona-cream: #fbf7f4;
+  --persona-muted: #9c8e8a;
+  --persona-text: #ece5e2;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--persona-bg);
+  color: var(--persona-text);
+  font-family: var(--font-sans);
+}
+
+.font-serif-persona {
+  font-family: var(--font-serif);
+}
+
+.font-sans-persona {
+  font-family: var(--font-sans);
+}
+
+/* Persona Accent Gradient */
+.bg-persona-gradient {
+  background: linear-gradient(135deg, #a55850 0%, #b98d76 100%);
+}
+
+.text-persona-gradient {
+  background: linear-gradient(135deg, #f9ede9 0%, #d8aba1 50%, #b98d76 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

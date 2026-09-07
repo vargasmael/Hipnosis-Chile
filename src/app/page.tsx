@@ -6,20 +6,22 @@ import {
   Sparkles,
   Moon,
   HeartHandshake,
-  Compass,
+  Brain,
   CheckCircle2,
   ShieldAlert,
-  Volume2,
   Lock,
   ArrowRight,
   Play,
   Pause,
-  HelpCircle,
+  Headphones,
+  Wind,
+  ShieldCheck,
+  Quote,
+  Feather,
   Clock,
-  Smartphone,
-  Headphones
+  Compass
 } from 'lucide-react';
-import { MOCK_CATEGORIAS, MOCK_SESIONES } from '@/lib/data/mockData';
+import { MOCK_SESIONES } from '@/lib/data/mockData';
 import { SessionCard } from '@/components/sessions/SessionCard';
 import { usePlayer } from '@/context/PlayerContext';
 
@@ -32,72 +34,77 @@ export default function LandingPage() {
 
   const faqs = [
     {
-      q: '¿Qué es la hipnosis clínica y qué se siente durante una sesión?',
-      a: 'La hipnosis es un estado natural de relajación focalizada donde el diálogo crítico se calma y el cerebro entra en ritmos alfa y theta. Siempre mantienes el control consciente, nunca pierdes el conocimiento y sales del estado cuando lo deseas, sintiéndote renovado y en paz.',
+      q: '¿Qué se siente durante una sesión de Re-Programa?',
+      a: 'Es una experiencia profundamente placentera y reconfortante. Es similar al instante exacto antes de quedarte dormido: tu cuerpo entra en un descanso total y tu respiración se ralentiza, mientras tu mente permanece en una calma lúcida. Siempre conservas el control consciente y sales del estado sintiéndote como si te hubieran quitado un peso inmenso de encima.',
     },
     {
-      q: '¿Cómo funciona la membresía mensual de Hipnosis Chile?',
-      a: 'Por un único pago mensual de $9.990 CLP, obtienes acceso ilimitado a toda la biblioteca de audios y videos de hipnosis, meditaciones nocturnas, reprogramación de hábitos y anclajes de confianza. Sin límites de reproducción y con nuevas sesiones cada semana.',
+      q: '¿Y si me quedo dormido durante la sesión?',
+      a: '¡Es lo ideal en las sesiones nocturnas! Tu subconsciente continúa procesando las sugestiones positivas y las frecuencias sonoras reparadoras incluso mientras duermes profundamente, permitiendo que tu sistema nervioso se regenere por completo.',
     },
     {
-      q: '¿Puedo escuchar las sesiones en segundo plano y con el celular bloqueado?',
-      a: '¡Sí! Nuestra plataforma web está optimizada para dispositivos móviles (iOS y Android), permitiendo reproducir con la pantalla bloqueada o mientras realizas otras tareas relajantes.',
+      q: '¿Cómo funciona la suscripción mensual de Re-Programa?',
+      a: 'Por un único pago mensual de $9.990 CLP, tienes acceso ilimitado a toda la biblioteca de hipnosis guiada, audios para insomnio, alivio de ansiedad y reprogramación de hábitos. Sin restricciones de horario ni límites de reproducción.',
     },
     {
-      q: '¿Puedo cancelar mi suscripción en cualquier momento?',
-      a: 'Por supuesto. Desde tu perfil puedes cancelar o pausar tu suscripción con un solo clic a través de Mercado Pago, sin letras chicas ni periodos de permanencia obligatoria.',
+      q: '¿Puedo escuchar en mi celular con la pantalla apagada?',
+      a: 'Sí, totalmente. Nuestra plataforma está optimizada para que puedas ponerte tus audífonos, bloquear la pantalla del celular y dejar que el audio siga fluyendo sin luz que altere tu descanso ni interrupciones.',
+    },
+    {
+      q: '¿Cómo cancelo si decido no continuar?',
+      a: 'Tienes libertad absoluta. Puedes cancelar tu membresía en cualquier momento desde tu perfil con un solo clic. Sin llamadas, sin explicaciones y sin cláusulas de permanencia.',
     },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-[#140f0e] text-[#ece5e2] overflow-x-hidden selection:bg-[#a55850] selection:text-white font-sans-persona">
       {/* ------------------------------------------------------------- */}
-      {/* SECCIÓN HERO                                                  */}
+      {/* 1. SECCIÓN HERO (El gancho dramático)                         */}
       {/* ------------------------------------------------------------- */}
-      <section className="relative pt-16 pb-20 md:pt-24 md:pb-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
-        {/* Luces de fondo ambientales */}
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[350px] bg-indigo-600/15 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute top-1/3 left-1/4 w-[300px] h-[300px] bg-teal-500/10 blur-[100px] rounded-full pointer-events-none" />
+      <section className="relative pt-16 pb-20 md:pt-28 md:pb-36 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
+        {/* Atmósfera de iluminación suave tras la tormenta (Colores Persona: Terracota & Sandstone) */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#a55850]/12 blur-[150px] rounded-full pointer-events-none" />
+        <div className="absolute top-1/3 left-1/4 w-[380px] h-[380px] bg-[#b98d76]/10 blur-[130px] rounded-full pointer-events-none" />
 
-        {/* Badge superior */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 text-xs font-semibold mb-6 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-teal-400" />
-          <span>Streaming de Hipnosis & Bienestar Digital #1 en Chile</span>
+        {/* Badge emotivo inspirado en Persona */}
+        <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#1e1716] border border-[#3b2c29] text-[#b98d76] text-xs font-medium mb-8 shadow-inner backdrop-blur-md">
+          <Feather className="w-3.5 h-3.5 text-[#a55850]" />
+          <span className="tracking-wide">Tu refugio íntimo de paz mental y descanso profundo</span>
         </div>
 
-        {/* Título Principal */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight leading-[1.15] max-w-4xl">
-          Paz mental profunda y descanso reparador,{' '}
-          <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-teal-300 bg-clip-text text-transparent">
-            en un solo lugar.
+        {/* Título Principal Dramático con Tipografía Editorial Serif Playfair Display */}
+        <h1 className="font-serif-persona text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-normal text-[#fbf7f4] tracking-tight leading-[1.12] max-w-4xl">
+          ¿Sientes que tu propia mente{' '}
+          <span className="italic font-normal bg-gradient-to-r from-[#fbf7f4] via-[#d8aba1] to-[#b98d76] bg-clip-text text-transparent">
+            te está frenando?
           </span>
         </h1>
 
-        {/* Subtítulo */}
-        <p className="text-base sm:text-lg md:text-xl text-slate-300 mt-6 max-w-2xl leading-relaxed">
-          Accede 24/7 a sesiones guiadas de hipnosis clínica, inducciones para el sueño profundo y reprogramación mental por un único pago mensual.
+        {/* Subtítulo Empático */}
+        <p className="text-base sm:text-lg md:text-xl text-[#a89b97] mt-7 max-w-2xl leading-relaxed font-light">
+          El estrés, las noches sin dormir y la ansiedad silenciosa te están consumiendo.
+          No tienes que seguir luchando solo. Es hora de recuperar el control.
         </p>
 
-        {/* Botones CTA */}
-        <div className="flex flex-col sm:flex-row items-center gap-3.5 mt-8 w-full sm:w-auto">
+        {/* Botones CTA estilo Persona */}
+        <div className="flex flex-col sm:flex-row items-center gap-4 mt-10 w-full sm:w-auto">
           <Link
             href="/registro"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-4 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-base shadow-xl shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-9 py-4 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-base shadow-xl shadow-[#a55850]/25 transition-all hover:scale-[1.02] active:scale-95 border border-[#a55850]"
           >
-            Comenzar Ahora por $9.990/mes
+            <span>Empieza a Sanar Hoy - Acceso Inmediato</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/login"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 font-semibold text-sm transition-colors"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-full bg-[#1c1514] hover:bg-[#251d1c] text-[#ece5e2] border border-[#3b2c29] font-medium text-sm transition-colors backdrop-blur-sm"
           >
             Ya tengo una cuenta
           </Link>
         </div>
 
-        {/* Micro-demo interactiva de audio */}
-        <div className="mt-12 w-full max-w-lg p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl backdrop-blur-md flex items-center justify-between gap-4 text-left">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Micro-reproductor interactivo: Muestra de alivio inmediato */}
+        <div className="mt-14 w-full max-w-xl p-4 sm:p-5 rounded-3xl bg-[#1c1514]/90 border border-[#3b2c29] shadow-2xl backdrop-blur-md flex items-center justify-between gap-4 text-left transition-all hover:border-[#a55850]/40">
+          <div className="flex items-center gap-3.5 min-w-0">
             <button
               onClick={() => {
                 if (isSamplePlaying) {
@@ -106,199 +113,320 @@ export default function LandingPage() {
                   playSession(demoSampleSession);
                 }
               }}
-              className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-indigo-600/30 transition-transform active:scale-95"
+              className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shrink-0 shadow-lg shadow-[#a55850]/30 transition-transform active:scale-95"
+              aria-label="Escuchar muestra gratuita"
             >
               {isSamplePlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
             </button>
             <div className="min-w-0">
-              <span className="text-[11px] font-semibold text-teal-400 uppercase tracking-wider">
-                Muestra Gratuita
+              <span className="text-[11px] font-semibold text-[#b98d76] uppercase tracking-wider flex items-center gap-1">
+                <Wind className="w-3 h-3 text-[#a55850]" /> Muestra de Calma Inmediata (60s)
               </span>
-              <h4 className="text-sm font-semibold text-white truncate">
+              <h4 className="font-serif-persona text-sm sm:text-base font-medium text-[#fbf7f4] truncate mt-0.5">
                 {demoSampleSession.titulo}
               </h4>
-              <p className="text-xs text-slate-400 truncate">
-                Prueba 60 segundos de relajación guiada
+              <p className="text-xs text-[#a89b97] truncate">
+                Cierra los ojos, respira hondo y siente la liberación
               </p>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 shrink-0">
-            <Headphones className="w-4 h-4 text-indigo-400" />
+          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#a89b97] shrink-0 px-3 py-1.5 rounded-full bg-[#140f0e] border border-[#3b2c29]">
+            <Headphones className="w-3.5 h-3.5 text-[#b98d76]" />
             <span>Usar audífonos</span>
           </div>
         </div>
 
-        {/* Garantías y logos */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-teal-400" />
-            <span>Pago seguro con Mercado Pago</span>
+        {/* Sellos de tranquilidad */}
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-[#9c8e8a]">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-[#b98d76]" />
+            <span>100% Confidencial y Seguro</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-teal-400" />
-            <span>Cancela cuando quieras</span>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#b98d76]" />
+            <span>Sin citas ni salas de espera</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-teal-400" />
-            <span>Audio en segundo plano</span>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-[#b98d76]" />
+            <span>Cancela cuando quieras con 1 clic</span>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* PROPUESTA DE VALOR / BENEFICIOS                               */}
+      {/* 2. SECCIÓN DEL PROBLEMA (Conexión sentimental / Agitación PAS) */}
       {/* ------------------------------------------------------------- */}
-      <section id="beneficios" className="py-16 bg-slate-900/40 border-y border-slate-900 px-4 sm:px-6 lg:px-8">
+      <section className="py-20 md:py-28 bg-[#181211] border-y border-[#2d2220] px-4 sm:px-6 lg:px-8 relative">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-              ¿Por qué Hipnosis Chile?
+          {/* Cabecera de dolor empático */}
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-widest block mb-2 font-sans-persona">
+              La batalla silenciosa
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-              Diseñado para reprogramar tu mente sin esfuerzo
+            <h2 className="font-serif-persona text-3xl sm:text-5xl md:text-6xl font-normal text-[#fbf7f4] tracking-tight leading-tight">
+              Sabemos lo agotador que es fingir que todo está bien.
             </h2>
+            <p className="text-[#a89b97] text-base sm:text-lg mt-4 leading-relaxed font-light">
+              Sonreír por fuera mientras por dentro sientes que estás al borde del colapso no es vivir,
+              es simplemente resistir. Reconocer lo que sientes no es debilidad; es el primer paso para sanar.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col items-start">
-              <div className="w-12 h-12 rounded-xl bg-indigo-950/80 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4">
-                <Moon className="w-6 h-6" />
+          {/* Tres Tarjetas de Dolor Sentimental - Formato Persona Icon Box */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Tarjeta 1: Noches en Blanco */}
+            <div className="group p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] hover:border-[#a55850]/60 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#a55850]/5 rounded-full blur-2xl pointer-events-none group-hover:bg-[#a55850]/15 transition-colors" />
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-[#a55850] text-white flex items-center justify-center mb-6 shadow-md shadow-[#a55850]/20">
+                  <Moon className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-wider">El Insomnio</span>
+                <h3 className="font-serif-persona text-2xl font-normal text-[#fbf7f4] mt-1 mb-3">Noches en Blanco</h3>
+                <p className="text-base font-medium text-[#d8aba1] leading-snug">
+                  Tu cuerpo está exhausto, pero tu mente no se apaga.
+                </p>
+                <p className="text-sm text-[#9c8e8a] mt-3 leading-relaxed font-light">
+                  Pasan las horas mirando el techo, dando vueltas en la cama, repasando errores del pasado o anticipando problemas del mañana. Despiertas con más cansancio del que tenías al acostarte.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-white">Sueño Profundo Garantizado</h3>
-              <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-                Supera el insomnio sin fármacos. Inducciones sonoras con frecuencias delta que desaceleran tu actividad cerebral para dormir toda la noche.
-              </p>
+              <div className="mt-6 pt-4 border-t border-[#2d2220] text-xs text-[#b98d76]/90 italic font-serif-persona">
+                «Solo quiero poder dormir sin que mi cabeza no pare de dar vueltas.»
+              </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col items-start">
-              <div className="w-12 h-12 rounded-xl bg-purple-950/80 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4">
-                <HeartHandshake className="w-6 h-6" />
+            {/* Tarjeta 2: Estrés Invisible */}
+            <div className="group p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] hover:border-[#b98d76]/60 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#b98d76]/5 rounded-full blur-2xl pointer-events-none group-hover:bg-[#b98d76]/15 transition-colors" />
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-[#b98d76] text-white flex items-center justify-center mb-6 shadow-md shadow-[#b98d76]/20">
+                  <HeartHandshake className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-wider">La Ansiedad</span>
+                <h3 className="font-serif-persona text-2xl font-normal text-[#fbf7f4] mt-1 mb-3">Estrés Invisible</h3>
+                <p className="text-base font-medium text-[#d8aba1] leading-snug">
+                  Ese peso en el pecho que te acompaña desde que despiertas.
+                </p>
+                <p className="text-sm text-[#9c8e8a] mt-3 leading-relaxed font-light">
+                  Una respiración superficial, rigidez permanente en mandíbula y cuello, y esa alarma interna encendida que te hace sentir que algo malo va a suceder, incluso en momentos de calma.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-white">Regulación Somática del Estrés</h3>
-              <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-                Técnicas hipnóticas ericksonianas para aliviar el pecho apretado, calmar la taquicardia y resetear el sistema nervioso autónomo.
-              </p>
+              <div className="mt-6 pt-4 border-t border-[#2d2220] text-xs text-[#b98d76]/90 italic font-serif-persona">
+                «Siento que cargo un peso enorme que nadie más puede ver.»
+              </div>
             </div>
 
-            <div className="p-6 rounded-2xl bg-slate-900/70 border border-slate-800 flex flex-col items-start">
-              <div className="w-12 h-12 rounded-xl bg-teal-950/80 border border-teal-500/30 flex items-center justify-center text-teal-400 mb-4">
-                <Smartphone className="w-6 h-6" />
+            {/* Tarjeta 3: Autosabotaje */}
+            <div className="group p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] hover:border-[#a55850]/60 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#a55850]/5 rounded-full blur-2xl pointer-events-none group-hover:bg-[#a55850]/15 transition-colors" />
+              <div>
+                <div className="w-14 h-14 rounded-2xl bg-[#a55850] text-white flex items-center justify-center mb-6 shadow-md shadow-[#a55850]/20">
+                  <Brain className="w-6 h-6" />
+                </div>
+                <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-wider">La Voz Crítica</span>
+                <h3 className="font-serif-persona text-2xl font-normal text-[#fbf7f4] mt-1 mb-3">Autosabotaje</h3>
+                <p className="text-base font-medium text-[#d8aba1] leading-snug">
+                  Esa voz interna que te dice que no eres suficiente.
+                </p>
+                <p className="text-sm text-[#9c8e8a] mt-3 leading-relaxed font-light">
+                  El síndrome del impostor, la culpa irracional y los patrones repetitivos que sabotean tus metas y tus relaciones. Un ciclo de exigencia desmedida que nunca te permite sentirte en paz.
+                </p>
               </div>
-              <h3 className="text-lg font-bold text-white">Experiencia Streaming Tipo Spotify</h3>
-              <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-                Interfaz fluida y oscura que guarda tu punto de escucha automáticamente. Escucha mientras caminas o descansas con la pantalla apagada.
-              </p>
+              <div className="mt-6 pt-4 border-t border-[#2d2220] text-xs text-[#b98d76]/90 italic font-serif-persona">
+                «Por más que me esfuerzo, siento que nunca es suficiente.»
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* VISTA PREVIA DE SESIONES Y CATEGORÍAS                          */}
+      {/* 3. CITA TERAPÉUTICA (Inspirada en el Counseling de Persona)    */}
       {/* ------------------------------------------------------------- */}
-      <section id="sesiones" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-4">
-          <div>
-            <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-              Catálogo de Sesiones
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-              Explora algunas de nuestras sesiones guiadas
-            </h2>
-          </div>
-          <Link
-            href="/registro"
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-400 hover:text-indigo-300"
-          >
-            Acceder al catálogo completo <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {MOCK_SESIONES.slice(0, 3).map((session) => (
-            <SessionCard key={session.id} session={session} />
-          ))}
-        </div>
-      </section>
-
-      {/* ------------------------------------------------------------- */}
-      {/* PLAN Y PRECIOS                                                */}
-      {/* ------------------------------------------------------------- */}
-      <section id="membresia" className="py-20 bg-gradient-to-b from-slate-900/50 to-slate-950 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl mx-auto text-center">
-          <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-            Membresía Todo Incluido
+      <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
+        <div className="p-8 sm:p-12 rounded-3xl bg-[#181211] border border-[#332623] relative">
+          <Quote className="w-10 h-10 text-[#a55850]/40 mx-auto mb-4" />
+          <p className="font-serif-persona text-xl sm:text-2xl text-[#fbf7f4] italic font-normal leading-relaxed">
+            «La mente no se calma con exigencia ni fuerza bruta. Se transforma cuando le ofreces un espacio de silencio, contención y el lenguaje adecuado para soltar.»
+          </p>
+          <span className="block text-xs uppercase tracking-widest text-[#b98d76] mt-4 font-semibold">
+            Filosofía de Reprogramación Consciente
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white mt-2">
-            Invierte en tu tranquilidad por menos de lo que cuesta un café a la semana
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 4. SECCIÓN DE LA SOLUCIÓN (La plataforma / Tu refugio)         */}
+      {/* ------------------------------------------------------------- */}
+      <section className="py-20 md:py-28 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="text-center max-w-3xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#1e1716] border border-[#3b2c29] text-[#b98d76] text-xs font-semibold mb-4">
+            <Sparkles className="w-3.5 h-3.5 text-[#a55850]" />
+            <span>La liberación que tu mente estaba pidiendo</span>
+          </div>
+          <h2 className="font-serif-persona text-3xl sm:text-5xl md:text-6xl font-normal text-[#fbf7f4] tracking-tight">
+            Bienvenido a Re-Programa.{' '}
+            <span className="italic font-normal bg-gradient-to-r from-[#d8aba1] to-[#b98d76] bg-clip-text text-transparent">
+              Tu refugio privado.
+            </span>
           </h2>
-          <p className="text-slate-300 mt-3 max-w-xl mx-auto text-sm sm:text-base">
-            Sin contratos forzosos. Disfruta de libertad total y cancela en cualquier momento con un clic.
+          <p className="text-[#a89b97] text-base sm:text-lg mt-6 leading-relaxed font-light max-w-2xl mx-auto">
+            Una biblioteca exclusiva de sesiones de hipnosis y reprogramación mental.
+            Accede 24/7 desde tu celular, ponte los audífonos y deja que nosotros guiemos tu mente hacia la paz que mereces. Todo por un único pago mensual, cancela cuando quieras.
+          </p>
+        </div>
+
+        {/* Pilares de la Experiencia con la estética de Persona */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+          <div className="p-7 rounded-3xl bg-[#1e1716] border border-[#3b2c29] flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#a55850]/20 border border-[#a55850]/40 flex items-center justify-center text-[#a55850] shrink-0">
+              <Headphones className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif-persona text-lg font-normal text-[#fbf7f4]">Inducciones Sonoras Profundas</h4>
+              <p className="text-xs sm:text-sm text-[#9c8e8a] mt-1.5 leading-relaxed font-light">
+                Frecuencias alfa y ondas delta diseñadas para desacelerar tu frecuencia cardíaca y calmar la amígdala cerebral en minutos.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-7 rounded-3xl bg-[#1e1716] border border-[#3b2c29] flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#b98d76]/20 border border-[#b98d76]/40 flex items-center justify-center text-[#b98d76] shrink-0">
+              <Brain className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif-persona text-lg font-normal text-[#fbf7f4]">Reprogramación Subconsciente</h4>
+              <p className="text-xs sm:text-sm text-[#9c8e8a] mt-1.5 leading-relaxed font-light">
+                Técnicas clínicas para reescribir hábitos automáticos, apagar el autosabotaje y restaurar una autoconfianza sólida.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-7 rounded-3xl bg-[#1e1716] border border-[#3b2c29] flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[#a55850]/20 border border-[#a55850]/40 flex items-center justify-center text-[#a55850] shrink-0">
+              <Moon className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="font-serif-persona text-lg font-normal text-[#fbf7f4]">Reproducción Nocturna sin Luz</h4>
+              <p className="text-xs sm:text-sm text-[#9c8e8a] mt-1.5 leading-relaxed font-light">
+                Bloquea tu pantalla, déjate guiar en la oscuridad y despierta renovado al día siguiente sin interrupciones.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Catálogo de Muestra */}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#2d2220] pb-4">
+            <div>
+              <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-widest font-sans-persona">
+                Catálogo Exclusivo
+              </span>
+              <h3 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] mt-1">
+                Sesiones diseñadas para cada momento de tu día
+              </h3>
+            </div>
+            <Link
+              href="/registro"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[#b98d76] hover:text-[#d8aba1] transition-colors"
+            >
+              Explorar todo el catálogo <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            {MOCK_SESIONES.slice(0, 3).map((session) => (
+              <SessionCard key={session.id} session={session} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ------------------------------------------------------------- */}
+      {/* 5. SECCIÓN DE PRECIOS Y CIERRE (La oferta irresistible)       */}
+      {/* ------------------------------------------------------------- */}
+      <section id="membresia" className="py-20 md:py-32 bg-gradient-to-b from-[#181211] via-[#140f0e] to-[#140f0e] px-4 sm:px-6 lg:px-8 border-t border-[#2d2220] relative">
+        <div className="max-w-4xl mx-auto text-center">
+          <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-widest block mb-2 font-sans-persona">
+            Tu Paz Mental No Es Un Lujo
+          </span>
+          <h2 className="font-serif-persona text-3xl sm:text-5xl md:text-6xl font-normal text-[#fbf7f4] tracking-tight">
+            ¿Cuánto vale volver a dormir en paz?
+          </h2>
+          <p className="text-[#a89b97] mt-4 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed font-light">
+            Una sola sesión presencial de terapia o hipnosis tradicional cuesta entre $40.000 y $60.000 CLP.
+            En <strong>Re-Programa</strong> tienes acompañamiento nocturno y diario ilimitado por una fracción ínfima.
           </p>
 
-          {/* Tarjeta de Precio */}
-          <div className="mt-10 max-w-md mx-auto p-8 rounded-3xl bg-slate-900 border-2 border-indigo-500/50 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-[11px] font-bold uppercase tracking-wider text-white shadow">
-              Plan Único Ilimitado
+          {/* Tarjeta de Precio Estilo Persona */}
+          <div className="mt-12 max-w-lg mx-auto p-8 sm:p-10 rounded-3xl bg-[#1e1716] border-2 border-[#a55850]/50 shadow-2xl relative overflow-hidden backdrop-blur-md">
+            {/* Tag destacado */}
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-5 py-1 rounded-full bg-[#a55850] text-[11px] font-bold uppercase tracking-widest text-white shadow-lg">
+              Membresía Ilimitada
             </div>
 
-            <div className="mt-4 flex items-baseline justify-center gap-1">
-              <span className="text-4xl sm:text-5xl font-extrabold text-white">$9.990</span>
-              <span className="text-slate-400 font-medium">CLP / mes</span>
+            <div className="mt-4 flex items-baseline justify-center gap-1.5">
+              <span className="font-serif-persona text-5xl sm:text-6xl font-normal text-[#fbf7f4] tracking-tight">$9.990</span>
+              <span className="text-[#a89b97] font-medium text-sm sm:text-base">CLP / mes</span>
             </div>
 
-            <p className="text-xs text-slate-400 mt-2">
-              Cobro recurrente automático procesado con Mercado Pago
+            <p className="text-xs text-[#d8aba1] mt-2 font-medium">
+              Menos de $330 al día  Más económico que un café a la semana
             </p>
 
-            <ul className="mt-6 space-y-3 text-left text-sm text-slate-300">
-              <li className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>Acceso 24/7 a todas las sesiones de audio y video</span>
+            <div className="my-6 border-t border-[#2d2220]" />
+
+            {/* Lista de beneficios */}
+            <ul className="space-y-3.5 text-left text-sm text-[#ece5e2]">
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#b98d76] shrink-0 mt-0.5" />
+                <span>Acceso 24/7 sin límites a toda la biblioteca de reprogramación</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>Reproducción móvil en segundo plano</span>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#b98d76] shrink-0 mt-0.5" />
+                <span>Inducciones para insomnio, ansiedad, estrés y autoestima</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>Nuevas sesiones guiadas añadidas cada semana</span>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#b98d76] shrink-0 mt-0.5" />
+                <span>Reproducción móvil con pantalla bloqueada para la noche</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>Historial de progreso y lista de favoritos</span>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#b98d76] shrink-0 mt-0.5" />
+                <span>Nuevas sesiones guiadas añadidas periódicamente</span>
               </li>
-              <li className="flex items-center gap-2.5">
-                <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-                <span>Cancela cuando quieras con 1 clic</span>
+              <li className="flex items-start gap-3">
+                <CheckCircle2 className="w-5 h-5 text-[#b98d76] shrink-0 mt-0.5" />
+                <span>Libertad absoluta: cancela con 1 solo clic en cualquier momento</span>
               </li>
             </ul>
 
+            {/* Botón CTA de Cierre */}
             <Link
               href="/registro"
-              className="mt-8 w-full flex items-center justify-center gap-2 py-3.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-all hover:scale-105 active:scale-95"
+              className="mt-8 w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-base shadow-xl shadow-[#a55850]/30 transition-all hover:scale-[1.02] active:scale-95 border border-[#a55850]"
             >
-              Suscribirse con Mercado Pago
+              <span>Quiero Re-Programar mi mente</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
 
-            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
-              <Lock className="w-3.5 h-3.5 text-teal-400" />
-              <span>Transacción 100% encriptada y segura</span>
+            {/* Garantía de Seguridad */}
+            <div className="mt-4 flex items-center justify-center gap-2 text-xs text-[#a89b97]">
+              <Lock className="w-3.5 h-3.5 text-[#b98d76]" />
+              <span>Cobro seguro procesado con Mercado Pago  Sin permanencia</span>
             </div>
           </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* PREGUNTAS FRECUENTES (FAQ)                                    */}
+      {/* 6. PREGUNTAS FRECUENTES (FAQ)                                 */}
       {/* ------------------------------------------------------------- */}
       <section id="faq" className="py-20 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto w-full">
-        <div className="text-center mb-10">
-          <span className="text-xs font-semibold text-indigo-400 uppercase tracking-widest">
-            Dudas Comunes
+        <div className="text-center mb-12">
+          <span className="text-xs font-semibold text-[#b98d76] uppercase tracking-widest block mb-1 font-sans-persona">
+            Resolvemos tus dudas
           </span>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+          <h2 className="font-serif-persona text-3xl sm:text-4xl font-normal text-[#fbf7f4]">
             Preguntas Frecuentes
           </h2>
         </div>
@@ -309,17 +437,19 @@ export default function LandingPage() {
             return (
               <div
                 key={idx}
-                className="border border-slate-800 rounded-2xl bg-slate-900/60 overflow-hidden"
+                className="border border-[#2d2220] rounded-2xl bg-[#181211] overflow-hidden transition-colors hover:border-[#3b2c29]"
               >
                 <button
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full p-5 text-left flex items-center justify-between gap-4 font-semibold text-white hover:text-indigo-300 transition-colors"
+                  className="w-full p-5 text-left flex items-center justify-between gap-4 font-medium text-[#fbf7f4] hover:text-[#d8aba1] transition-colors"
                 >
-                  <span className="text-sm sm:text-base">{faq.q}</span>
-                  <span className="text-xl text-indigo-400">{isOpen ? '−' : '+'}</span>
+                  <span className="text-sm sm:text-base font-serif-persona">{faq.q}</span>
+                  <span className="text-lg text-[#a55850] font-bold shrink-0">
+                    {isOpen ? '-' : '+'}
+                  </span>
                 </button>
                 {isOpen && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-300 leading-relaxed border-t border-slate-800/60 pt-3">
+                  <div className="px-5 pb-5 text-xs sm:text-sm text-[#a89b97] leading-relaxed border-t border-[#261c1a] pt-3 font-light">
                     {faq.a}
                   </div>
                 )}
@@ -330,40 +460,40 @@ export default function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* FOOTER Y AVISO LEGAL DE USO RESPONSABLE (MANDATORIO)          */}
+      {/* 7. FOOTER Y AVISOS LEGALES (Uso responsable mandatorio)       */}
       {/* ------------------------------------------------------------- */}
-      <footer className="mt-auto border-t border-slate-800/80 bg-slate-950 py-12 px-4 sm:px-6 lg:px-8">
+      <footer className="mt-auto border-t border-[#261c1a] bg-[#110c0b] py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto space-y-8">
           {/* Disclaimer Médico Destacado */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-amber-500/20 flex items-start gap-3.5 text-xs sm:text-sm text-slate-300">
-            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <div className="p-5 rounded-3xl bg-[#181211] border border-[#a55850]/20 flex items-start gap-3.5 text-xs sm:text-sm text-[#a89b97]">
+            <ShieldAlert className="w-5 h-5 text-[#a55850] shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-bold text-amber-300 block">
-                Aviso de Uso Responsable y Descargo Médico:
+              <span className="font-serif-persona text-sm font-normal text-[#d8aba1] block">
+                Aviso de Uso Responsable y Descargo de Responsabilidad:
               </span>
-              <p className="leading-relaxed text-slate-400 text-xs">
-                Las sesiones de hipnosis y bienestar disponibles en Hipnosis Chile son herramientas de desarrollo personal, relajación guiada y entrenamiento mental consciente. <strong>No constituyen ni sustituyen la consulta, diagnóstico o tratamiento de un médico, psiquiatra o psicólogo clínico</strong>. Si padeces alguna condición médica, epilepsia o trastorno psiquiátrico severo, consulta con tu médico de cabecera antes de iniciar. <strong>Nunca escuches estas sesiones mientras conduces vehículos o manejas maquinaria pesada</strong>.
+              <p className="leading-relaxed text-[#9c8e8a] text-xs font-light">
+                Las sesiones de bienestar, relajación e hipnosis disponibles en <strong>Re-Programa</strong> son herramientas diseñadas para el desarrollo personal, la inducción al descanso y el entrenamiento mental consciente. <strong>No constituyen ni sustituyen la atención médica, psiquiátrica o psicológica profesional ni diagnósticos clínicos</strong>. Si padeces alguna condición de salud mental severa, epilepsia o patología neurológica, consulta a tu médico especialista. <strong>Nunca escuches estas sesiones mientras conduces vehículos o manejas maquinaria pesada</strong>.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-900 text-xs text-slate-500">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-4 border-t border-[#1e1716] text-xs text-[#7d6f6b]">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-xl bg-[#a55850] flex items-center justify-center text-white shadow-sm shadow-[#a55850]/30">
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
-              <span className="font-bold text-slate-300">Hipnosis Chile</span>
+              <span className="font-serif-persona text-sm font-normal text-[#fbf7f4]">Re-Programa</span>
               <span>© {new Date().getFullYear()} Todos los derechos reservados.</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-6">
-              <Link href="/terminos" className="hover:text-slate-300 transition-colors">
+              <Link href="/terminos" className="hover:text-[#d8aba1] transition-colors">
                 Términos y Condiciones
               </Link>
-              <Link href="/privacidad" className="hover:text-slate-300 transition-colors">
+              <Link href="/privacidad" className="hover:text-[#d8aba1] transition-colors">
                 Política de Privacidad
               </Link>
-              <Link href="/#faq" className="hover:text-slate-300 transition-colors">
+              <Link href="/#faq" className="hover:text-[#d8aba1] transition-colors">
                 Ayuda y Soporte
               </Link>
             </div>

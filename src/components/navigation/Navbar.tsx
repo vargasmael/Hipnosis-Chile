@@ -32,21 +32,19 @@ export function Navbar() {
   const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/registro';
 
   return (
-    <header className="sticky top-0 z-30 w-full bg-slate-950/80 backdrop-blur-md border-b border-slate-800/60">
+    <header className="sticky top-0 z-30 w-full bg-[#140f0e]/90 backdrop-blur-md border-b border-[#2d2220]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* LOGO */}
         <Link href={user ? '/biblioteca' : '/'} className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-teal-400 p-0.5 shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-indigo-400 group-hover:rotate-12 transition-transform" />
-            </div>
+          <div className="w-9 h-9 rounded-xl bg-[#a55850] p-0.5 shadow-md shadow-[#a55850]/20 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <Sparkles className="w-5 h-5 text-white group-hover:rotate-12 transition-transform" />
           </div>
           <div>
-            <span className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-              Hipnosis <span className="text-indigo-400 font-light">Chile</span>
+            <span className="font-serif-persona text-lg font-normal tracking-tight text-[#fbf7f4] flex items-center gap-1">
+              Re<span className="text-[#b98d76] font-normal italic">-Programa</span>
             </span>
-            <span className="block text-[10px] text-slate-400 tracking-wider uppercase font-medium -mt-1">
-              Bienestar & Mente
+            <span className="block text-[10px] text-[#a89b97] tracking-wider uppercase font-medium -mt-1 font-sans-persona">
+              Tu Refugio Mental
             </span>
           </div>
         </Link>
@@ -98,16 +96,16 @@ export function Navbar() {
             </>
           ) : (
             <>
-              <Link href="/#beneficios" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/#beneficios" className="text-[#a89b97] hover:text-[#fbf7f4] transition-colors">
                 Beneficios
               </Link>
-              <Link href="/#sesiones" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/#sesiones" className="text-[#a89b97] hover:text-[#fbf7f4] transition-colors">
                 Sesiones
               </Link>
-              <Link href="/#membresia" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/#membresia" className="text-[#a89b97] hover:text-[#fbf7f4] transition-colors">
                 Planes & Precios
               </Link>
-              <Link href="/#faq" className="text-slate-300 hover:text-white transition-colors">
+              <Link href="/#faq" className="text-[#a89b97] hover:text-[#fbf7f4] transition-colors">
                 Preguntas Frecuentes
               </Link>
             </>
@@ -117,26 +115,26 @@ export function Navbar() {
         {/* BOTONES DERECHA & PERFIL */}
         <div className="flex items-center gap-3">
           {/* BADGE DE MODO DEMO / TESTING RÁPIDO */}
-          <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-400">
-            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+          <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1c1514] border border-[#2d2220] text-[11px] text-[#a89b97]">
+            <span className="w-2 h-2 rounded-full bg-[#b98d76] animate-pulse" />
             <span>Test Role:</span>
             <button
               onClick={() => setDemoUser('activa', 'user')}
-              className="text-slate-300 hover:text-indigo-400 underline font-semibold"
+              className="text-[#ece5e2] hover:text-[#b98d76] underline font-semibold"
             >
               Activo
             </button>
             <span>|</span>
             <button
               onClick={() => setDemoUser('inactiva', 'user')}
-              className="text-slate-300 hover:text-amber-400 underline font-semibold"
+              className="text-[#ece5e2] hover:text-[#b98d76] underline font-semibold"
             >
               Inactivo
             </button>
             <span>|</span>
             <button
               onClick={() => setDemoUser('activa', 'admin')}
-              className="text-slate-300 hover:text-purple-400 underline font-semibold"
+              className="text-[#ece5e2] hover:text-[#a55850] underline font-semibold"
             >
               Admin
             </button>
@@ -236,13 +234,13 @@ export function Navbar() {
             <div className="flex items-center gap-2.5">
               <Link
                 href="/login"
-                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+                className="px-4 py-1.5 rounded-full text-xs font-medium text-[#ece5e2] hover:text-white hover:bg-[#1e1716] border border-transparent hover:border-[#3b2c29] transition-colors"
               >
                 Iniciar Sesión
               </Link>
               <Link
                 href="/registro"
-                className="px-4 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/30 transition-all hover:scale-[1.02] active:scale-95"
+                className="px-4 py-1.5 rounded-full text-xs font-semibold bg-[#a55850] hover:bg-[#b8665d] text-white shadow-md shadow-[#a55850]/25 transition-all hover:scale-[1.02] active:scale-95 border border-[#a55850]"
               >
                 Suscribirse
               </Link>

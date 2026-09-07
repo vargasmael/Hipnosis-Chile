@@ -7,15 +7,15 @@ import { FloatingPlayer } from '@/components/player/FloatingPlayer';
 import { BottomNav } from '@/components/navigation/BottomNav';
 
 export const metadata: Metadata = {
-  title: 'Hipnosis Chile - Plataforma de Streaming de Bienestar e Hipnosis',
+  title: 'Re-Programa - Plataforma de Streaming de Bienestar e Hipnosis',
   description:
-    'Membresía digital para relajación profunda, sueño reparador, liberación de estrés y reprogramación mental 24/7.',
-  keywords: ['hipnosis chile', 'sueño profundo', 'estrés', 'meditación', 'relajación', 'bienestar'],
-  applicationName: 'Hipnosis Chile',
+    'Tu refugio privado para calmar la mente, disolver el estrés y volver a dormir en paz.',
+  keywords: ['re-programa', 'hipnosis clínica', 'sueño profundo', 'ansiedad', 'estrés', 'bienestar mental'],
+  applicationName: 'Re-Programa',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Hipnosis Chile',
+    title: 'Re-Programa',
   },
 };
 

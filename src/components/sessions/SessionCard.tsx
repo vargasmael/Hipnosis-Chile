@@ -113,10 +113,10 @@ export function SessionCard({
   return (
     <div
       onClick={handlePlayClick}
-      className="group relative flex flex-col rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-indigo-500/30 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-950/30 cursor-pointer"
+      className="group relative flex flex-col rounded-3xl bg-[#1e1716] hover:bg-[#251d1c] border border-[#3b2c29] hover:border-[#a55850]/50 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#a55850]/10 cursor-pointer"
     >
       {/* Portada */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-800">
+      <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#2d2220]">
         {session.url_imagen_portada ? (
           <img
             src={session.url_imagen_portada}
@@ -124,23 +124,23 @@ export function SessionCard({
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-indigo-950/70 text-indigo-400">
+          <div className="w-full h-full flex items-center justify-center bg-[#251d1c] text-[#a55850]">
             <Sparkles className="w-12 h-12" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#140f0e] via-[#140f0e]/20 to-transparent" />
 
         {/* Badge duración */}
-        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md text-slate-200 text-xs font-medium border border-slate-700/50">
-          <Clock className="w-3.5 h-3.5 text-indigo-400" />
+        <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#140f0e]/80 backdrop-blur-md text-[#ece5e2] text-xs font-medium border border-[#3b2c29]">
+          <Clock className="w-3.5 h-3.5 text-[#b98d76]" />
           <span>{durationMinutes} min</span>
         </div>
 
         {/* Botón Favorito en portada */}
         <button
           onClick={handleFavoriteClick}
-          className={`absolute top-3 right-3 p-2 rounded-full bg-slate-950/60 backdrop-blur-md border border-slate-700/50 transition-colors ${
-            isFavorited ? 'text-rose-500' : 'text-slate-300 hover:text-white'
+          className={`absolute top-3 right-3 p-2 rounded-full bg-[#140f0e]/70 backdrop-blur-md border border-[#3b2c29] transition-colors ${
+            isFavorited ? 'text-[#a55850]' : 'text-[#a89b97] hover:text-white'
           }`}
         >
           <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
@@ -151,34 +151,34 @@ export function SessionCard({
           className={`absolute inset-0 flex items-center justify-center transition-all ${
             isCurrentPlaying
               ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100 bg-black/20'
+              : 'opacity-0 group-hover:opacity-100 bg-black/30'
           }`}
         >
-          <div className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/50 transition-transform active:scale-95 group-hover:scale-110">
+          <div className="w-13 h-13 rounded-2xl bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shadow-lg shadow-[#a55850]/40 transition-transform active:scale-95 group-hover:scale-110">
             {isCurrentPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
           </div>
         </div>
       </div>
 
       {/* Info */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
+      <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[11px] font-semibold text-indigo-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-[#b98d76] uppercase tracking-wider font-sans-persona">
               {session.categoria?.nombre || 'Bienestar'}
             </span>
           </div>
-          <h3 className="text-base font-semibold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
+          <h3 className="font-serif-persona text-lg font-normal text-[#fbf7f4] group-hover:text-[#d8aba1] transition-colors line-clamp-1">
             {session.titulo}
           </h3>
-          <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+          <p className="text-xs text-[#9c8e8a] mt-1.5 line-clamp-2 font-light leading-relaxed">
             {session.descripcion}
           </p>
         </div>
 
-        <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
+        <div className="mt-4 pt-3 border-t border-[#2d2220] flex items-center justify-between text-xs text-[#7d6f6b]">
           <span className="truncate">{session.guia_o_autor}</span>
-          <span className="capitalize text-slate-400">{session.tipo_multimedia}</span>
+          <span className="capitalize text-[#b98d76]">{session.tipo_multimedia}</span>
         </div>
       </div>
     </div>
