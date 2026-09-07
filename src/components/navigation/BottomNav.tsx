@@ -10,9 +10,9 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  // No mostrar en landing o auth screens iniciales si no hay usuario
+  // No mostrar en landing, auth screens o panel de admin
   const isPublicLanding = pathname === '/' || pathname === '/login' || pathname === '/registro';
-  if (!user && isPublicLanding) return null;
+  if ((!user && isPublicLanding) || pathname.startsWith('/admin')) return null;
 
   const navItems = [
     { label: 'Inicio', href: '/dashboard', icon: Home },

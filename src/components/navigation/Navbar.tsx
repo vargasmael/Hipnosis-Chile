@@ -30,6 +30,7 @@ export function Navbar() {
   };
 
   const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/registro';
+  if (pathname.startsWith('/admin')) return null;
 
   return (
     <header className="sticky top-0 z-30 w-full bg-[#140f0e]/90 backdrop-blur-md border-b border-[#2d2220]">

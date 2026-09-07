@@ -1,4 +1,4 @@
-import { Categoria, Sesion } from '@/types/database';
+import { Categoria, Sesion, Usuario } from '@/types/database';
 
 export const MOCK_CATEGORIAS: Categoria[] = [
   {
@@ -163,5 +163,68 @@ export const MOCK_SESIONES: Sesion[] = [
     guia_o_autor: 'Lic. Rodrigo Silva',
     veces_reproducida: 1790,
     created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+  }
+];
+
+export const MOCK_USUARIOS: Usuario[] = [
+  {
+    id: 'usr-1',
+    email: 'camila.silva@gmail.com',
+    nombre_completo: 'Camila Silva',
+    estado_suscripcion: 'activa',
+    id_suscripcion_mercadopago: 'mp_sub_994812301',
+    rol: 'user',
+    created_at: '2026-08-15T10:00:00Z',
+    updated_at: '2026-09-01T12:00:00Z',
+  },
+  {
+    id: 'usr-2',
+    email: 'felipe.morales@outlook.com',
+    nombre_completo: 'Felipe Morales',
+    estado_suscripcion: 'activa',
+    id_suscripcion_mercadopago: 'mp_sub_882910394',
+    rol: 'user',
+    created_at: '2026-08-20T14:30:00Z',
+    updated_at: '2026-09-02T09:15:00Z',
+  },
+  {
+    id: 'usr-3',
+    email: 'andrea.gonzalez@vtr.net',
+    nombre_completo: 'Andrea González',
+    estado_suscripcion: 'inactiva',
+    id_suscripcion_mercadopago: null,
+    rol: 'user',
+    created_at: '2026-08-25T18:00:00Z',
+    updated_at: '2026-08-25T18:00:00Z',
+  },
+  {
+    id: 'usr-4',
+    email: 'matias.valenzuela@gmail.com',
+    nombre_completo: 'Matías Valenzuela',
+    estado_suscripcion: 'cancelada',
+    id_suscripcion_mercadopago: 'mp_sub_772109842',
+    rol: 'user',
+    created_at: '2026-07-12T11:20:00Z',
+    updated_at: '2026-08-12T11:20:00Z',
+  },
+  {
+    id: 'usr-5',
+    email: 'admin@re-programa.cl',
+    nombre_completo: 'Administrador Re-Programa',
+    estado_suscripcion: 'activa',
+    id_suscripcion_mercadopago: 'mp_sub_internal_admin',
+    rol: 'admin',
+    created_at: '2026-07-01T00:00:00Z',
+    updated_at: '2026-07-01T00:00:00Z',
+  },
+  {
+    id: 'usr-6',
+    email: 'valentina.perez@icloud.com',
+    nombre_completo: 'Valentina Pérez',
+    estado_suscripcion: 'activa',
+    id_suscripcion_mercadopago: 'mp_sub_664192083',
+    rol: 'user',
+    created_at: '2026-08-28T08:45:00Z',
+    updated_at: '2026-09-05T14:10:00Z',
   }
 ];
