@@ -1,8 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabaseClient';
-import { normalizeSesion } from '@/lib/services/contentService';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from 'firebase/firestore';
+import { normalizeFirestoreSesion } from '@/lib/services/contentService';
 import {
   Film,
   Plus,
@@ -41,24 +49,42 @@ export default function AdminSesionesPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetching de Categorías
-      const resCat = await supabase.from('categorias').select('*').order('orden', { ascending: true });
-      if (resCat.data) {
-        setCategories(resCat.data);
-        if (resCat.data.length > 0 && !categoryId) {
-          setCategoryId(resCat.data[0].id);
-        }
+      // 1. Fetching de Categorías de Firestore
+      const catSnap = await getDocs(collection(db, 'categorias'));
+      const catList: Categoria[] = [];
+      catSnap.forEach((d) => {
+        const data = d.data();
+        catList.push({
+          id: d.id,
+          nombre: data.nombre || '',
+          slug: data.slug || data.nombre?.toLowerCase().replace(/\s+/g, '-') || d.id,
+          descripcion: data.descripcion || '',
+          orden: Number(data.orden) || 0,
+        });
+      });
+      catList.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      setCategories(catList);
+      if (catList.length > 0 && !categoryId) {
+        setCategoryId(catList[0].id);
       }
 
-      // 2. Fetching real de Sesiones de Supabase: supabase.from('sesiones').select('*')
-      const resSess = await supabase.from('sesiones').select('*, categoria:categorias(*)');
-      if (resSess.data) {
-        setSessions(resSess.data.map(normalizeSesion));
-      } else {
-        setSessions([]);
-      }
+      // 2. Fetching real de Sesiones de Firestore: collection(db, 'sesiones')
+      const sessSnap = await getDocs(collection(db, 'sesiones'));
+      const sessList: Sesion[] = [];
+      sessSnap.forEach((d) => {
+        sessList.push(normalizeFirestoreSesion(d.id, d.data()));
+      });
+
+      // Asignar objeto categoria si existe
+      sessList.forEach((s) => {
+        if (!s.categoria && s.categoria_id) {
+          s.categoria = catList.find((c) => c.id === s.categoria_id);
+        }
+      });
+
+      setSessions(sessList);
     } catch (err) {
-      console.warn('Error fetching sesiones:', err);
+      console.warn('Error fetching sesiones de Firestore:', err);
       setSessions([]);
     } finally {
       setLoading(false);
@@ -95,36 +121,46 @@ export default function AdminSesionesPage() {
     e.preventDefault();
     setUploading(true);
 
+    const selectedCat = categories.find((c) => c.id === categoryId);
+
     const newRecord = {
       titulo: title,
       descripcion: description,
-      categoria_id: categoryId || (categories[0]?.id ?? null),
+      categoria_id: categoryId || (categories[0]?.id ?? ''),
+      id_categoria: categoryId || (categories[0]?.id ?? ''),
+      categoria: selectedCat ? selectedCat : undefined,
       duracion: durationMinutes * 60,
       audio_url: mediaUrl || 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
+      url_archivo_multimedia: mediaUrl || 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
       imagen_url: coverUrl || 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=800&q=80',
+      url_imagen_portada: coverUrl || 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=800&q=80',
       destacado: isFeatured,
       guia_o_autor: author,
+      tipo_multimedia: 'audio' as const,
+      veces_reproducida: 0,
+      created_at: new Date().toISOString(),
     };
 
     try {
-      // Inserción real en Supabase
-      const { data, error } = await supabase.from('sesiones').insert([newRecord]).select();
+      // Inserción real en Firestore usando addDoc
+      const docRef = await addDoc(collection(db, 'sesiones'), newRecord);
 
-      if (error) {
-        showToast(`Error al guardar en Supabase: ${error.message}`);
-      } else {
-        showToast('Nueva sesión guardada en Supabase');
-        await fetchData();
-        setShowModal(false);
-        // Reset fields
-        setTitle('');
-        setDescription('');
-        setMediaUrl('');
-        setCoverUrl('');
-        setIsFeatured(false);
-      }
+      showToast('Nueva sesión guardada en Firestore');
+      const createdSession: Sesion = {
+        ...newRecord,
+        id: docRef.id,
+      };
+      setSessions((prev) => [createdSession, ...prev]);
+      setShowModal(false);
+
+      // Reset fields
+      setTitle('');
+      setDescription('');
+      setMediaUrl('');
+      setCoverUrl('');
+      setIsFeatured(false);
     } catch (err: any) {
-      showToast(err?.message || 'Error al conectar con Supabase');
+      showToast(err?.message || 'Error al guardar en Firestore');
     } finally {
       setUploading(false);
     }
@@ -132,36 +168,24 @@ export default function AdminSesionesPage() {
 
   const handleDeleteSession = async (id: string) => {
     try {
-      const { error } = await supabase.from('sesiones').delete().eq('id', id);
-      if (error) {
-        showToast(`Error al eliminar: ${error.message}`);
-      } else {
-        setSessions((prev) => prev.filter((s) => s.id !== id));
-        showToast('Sesión eliminada de Supabase');
-      }
+      await deleteDoc(doc(db, 'sesiones', id));
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      showToast('Sesión eliminada de Firestore');
     } catch (err: any) {
-      showToast('Error al procesar eliminación');
+      showToast('Error al eliminar sesión en Firestore');
     }
   };
 
   const handleToggleFeatured = async (session: Sesion) => {
     const nextState = !session.destacado;
     try {
-      const { error } = await supabase
-        .from('sesiones')
-        .update({ destacado: nextState })
-        .eq('id', session.id);
-
-      if (error) {
-        showToast(`Error al actualizar: ${error.message}`);
-      } else {
-        setSessions((prev) =>
-          prev.map((s) => (s.id === session.id ? { ...s, destacado: nextState } : s))
-        );
-        showToast('Estado destacado actualizado en Supabase');
-      }
+      await updateDoc(doc(db, 'sesiones', session.id), { destacado: nextState });
+      setSessions((prev) =>
+        prev.map((s) => (s.id === session.id ? { ...s, destacado: nextState } : s))
+      );
+      showToast('Estado destacado actualizado en Firestore');
     } catch {
-      showToast('Error al actualizar estado');
+      showToast('Error al actualizar estado en Firestore');
     }
   };
 
@@ -194,10 +218,10 @@ export default function AdminSesionesPage() {
             <span>Biblioteca de Audios & Frecuencias</span>
           </div>
           <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
-            Gestión de Sesiones (Supabase)
+            Gestión de Sesiones (Firestore)
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Crea, edita y organiza las inducciones guiadas consultando directamente la base de datos de Supabase.
+            Crea, edita y organiza las inducciones guiadas consultando y escribiendo directamente en la base de datos de Firestore.
           </p>
         </div>
 
@@ -253,7 +277,7 @@ export default function AdminSesionesPage() {
       {/* Tabla de Sesiones o Estado Vacío */}
       {loading ? (
         <div className="py-20 text-center text-xs text-[#a89b97] bg-[#1e1716] rounded-3xl border border-[#2d2220] animate-pulse">
-          Consultando sesiones en Supabase...
+          Consultando sesiones en Firestore...
         </div>
       ) : filteredSessions.length === 0 ? (
         <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
@@ -262,7 +286,7 @@ export default function AdminSesionesPage() {
             No hay sesiones disponibles aún
           </h3>
           <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
-            Aún no se han registrado audios en la tabla `sesiones` de Supabase o no coinciden con tu búsqueda. Haz clic en "Nueva Sesión" para crear la primera.
+            Aún no se han registrado audios en la colección `sesiones` de Firestore o no coinciden con tu búsqueda. Haz clic en "Nueva Sesión" para crear la primera.
           </p>
           <button
             onClick={() => setShowModal(true)}
@@ -328,7 +352,7 @@ export default function AdminSesionesPage() {
                       <button
                         onClick={() => handleDeleteSession(session.id)}
                         className="p-2 rounded-xl text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] transition-colors"
-                        title="Eliminar sesión de Supabase"
+                        title="Eliminar sesión de Firestore"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -341,7 +365,7 @@ export default function AdminSesionesPage() {
         </div>
       )}
 
-      {/* MODAL NUEVA SESIÓN CON GUARDADO EN SUPABASE */}
+      {/* MODAL NUEVA SESIÓN CON GUARDADO EN FIRESTORE (addDoc) */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-xl my-8 p-6 sm:p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] shadow-2xl space-y-6">
@@ -349,7 +373,7 @@ export default function AdminSesionesPage() {
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#a55850]" />
                 <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
-                  Publicar Nueva Sesión en Supabase
+                  Publicar Nueva Sesión en Firestore
                 </h3>
               </div>
               <button
@@ -447,7 +471,7 @@ export default function AdminSesionesPage() {
                   />
                   {mediaUrl && (
                     <span className="text-[11px] text-teal-400 block truncate mt-1">
-                      ✓ Archivo de audio listo para guardar en Supabase
+                      ✓ Archivo de audio listo para Firestore
                     </span>
                   )}
                 </div>
@@ -462,7 +486,7 @@ export default function AdminSesionesPage() {
                   />
                   {coverUrl && (
                     <span className="text-[11px] text-teal-400 block truncate mt-1">
-                      ✓ Portada lista para guardar en Supabase
+                      ✓ Portada lista para Firestore
                     </span>
                   )}
                 </div>
@@ -496,7 +520,7 @@ export default function AdminSesionesPage() {
                   disabled={uploading}
                   className="px-6 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-xs shadow-lg shadow-[#a55850]/20 disabled:opacity-50"
                 >
-                  {uploading ? 'Guardando en Supabase...' : 'Guardar en Supabase'}
+                  {uploading ? 'Guardando en Firestore...' : 'Guardar en Firestore'}
                 </button>
               </div>
             </form>

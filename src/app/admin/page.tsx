@@ -2,43 +2,75 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import { normalizeFirestoreSesion } from '@/lib/services/contentService';
 import {
   Film,
   FolderTree,
   Users,
   ShieldCheck,
-  TrendingUp,
   Plus,
   ArrowRight,
-  Clock,
-  Sparkles,
   CreditCard,
   CheckCircle2
 } from 'lucide-react';
-import { MOCK_CATEGORIAS, MOCK_SESIONES, MOCK_USUARIOS } from '@/lib/data/mockData';
 import { Sesion, Categoria, Usuario } from '@/types/database';
 
 export default function AdminDashboardOverview() {
-  const [sessions, setSessions] = useState<Sesion[]>(MOCK_SESIONES);
-  const [categories, setCategories] = useState<Categoria[]>(MOCK_CATEGORIAS);
-  const [users, setUsers] = useState<Usuario[]>(MOCK_USUARIOS);
+  const [sessions, setSessions] = useState<Sesion[]>([]);
+  const [categories, setCategories] = useState<Categoria[]>([]);
+  const [users, setUsers] = useState<Usuario[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sincronizar si hay datos locales guardados
-    if (typeof window !== 'undefined') {
+    async function loadStats() {
+      setLoading(true);
       try {
-        const savedSessions = localStorage.getItem('reprograma_admin_sesiones');
-        if (savedSessions) setSessions(JSON.parse(savedSessions));
+        const [sessSnap, catSnap, usrSnap] = await Promise.all([
+          getDocs(collection(db, 'sesiones')),
+          getDocs(collection(db, 'categorias')),
+          getDocs(collection(db, 'usuarios')),
+        ]);
 
-        const savedCats = localStorage.getItem('reprograma_admin_categorias');
-        if (savedCats) setCategories(JSON.parse(savedCats));
+        const sessList: Sesion[] = [];
+        sessSnap.forEach((d) => sessList.push(normalizeFirestoreSesion(d.id, d.data())));
+        setSessions(sessList);
 
-        const savedUsers = localStorage.getItem('reprograma_admin_usuarios');
-        if (savedUsers) setUsers(JSON.parse(savedUsers));
-      } catch {
-        // fallback
+        const catList: Categoria[] = [];
+        catSnap.forEach((d) => {
+          const data = d.data();
+          catList.push({
+            id: d.id,
+            nombre: data.nombre || '',
+            slug: data.slug || data.nombre?.toLowerCase().replace(/\s+/g, '-') || d.id,
+            descripcion: data.descripcion || '',
+          });
+        });
+        setCategories(catList);
+
+        const usrList: Usuario[] = [];
+        usrSnap.forEach((d) => {
+          const data = d.data();
+          usrList.push({
+            id: d.id,
+            email: data.email || '',
+            nombre_completo: data.nombre_completo || '',
+            estado_suscripcion: data.estado_suscripcion || 'inactiva',
+            rol: data.rol || 'user',
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString(),
+          });
+        });
+        setUsers(usrList);
+      } catch (err) {
+        console.warn('Error al cargar datos en panel general de Firestore:', err);
+      } finally {
+        setLoading(false);
       }
     }
+
+    loadStats();
   }, []);
 
   const activeUsersCount = users.filter((u) => u.estado_suscripcion === 'activa').length;
@@ -51,13 +83,13 @@ export default function AdminDashboardOverview() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1716] border border-[#3b2c29] text-[11px] font-semibold text-[#b98d76] mb-2">
             <ShieldCheck className="w-3.5 h-3.5 text-[#a55850]" />
-            <span>Panel de Administración Global</span>
+            <span>Panel de Administración (Firestore)</span>
           </div>
           <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
             Dashboard Administrativo
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Monitoreo general de la plataforma Re-Programa, catálogo y miembros activos.
+            Monitoreo general de la plataforma Re-Programa, catálogo y miembros activos conectados a Firestore.
           </p>
         </div>
 
@@ -84,7 +116,7 @@ export default function AdminDashboardOverview() {
           <div className="mt-3">
             <span className="text-3xl font-serif-persona text-[#fbf7f4]">{activeUsersCount}</span>
             <span className="text-[11px] text-[#7d6f6b] block mt-1">
-              De {users.length} usuarios registrados
+              De {users.length} miembros en Firestore
             </span>
           </div>
         </div>
@@ -99,7 +131,7 @@ export default function AdminDashboardOverview() {
           <div className="mt-3">
             <span className="text-3xl font-serif-persona text-[#fbf7f4]">{sessions.length}</span>
             <span className="text-[11px] text-[#7d6f6b] block mt-1">
-              {featuredSessionsCount} marcadas como destacadas
+              {featuredSessionsCount} destacadas en inicio
             </span>
           </div>
         </div>
@@ -114,14 +146,14 @@ export default function AdminDashboardOverview() {
           <div className="mt-3">
             <span className="text-3xl font-serif-persona text-[#fbf7f4]">{categories.length}</span>
             <span className="text-[11px] text-[#7d6f6b] block mt-1">
-              Áreas de sanación y enfoque
+              Áreas temáticas creadas
             </span>
           </div>
         </div>
 
         <div className="p-5 rounded-3xl bg-[#1e1716] border border-[#3b2c29] shadow-xl relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#a89b97] font-medium">Ingresos Recurrentes (MRR)</span>
+            <span className="text-xs text-[#a89b97] font-medium">Ingresos Estimados (MRR)</span>
             <div className="w-8 h-8 rounded-xl bg-[#a55850]/20 text-[#d8aba1] flex items-center justify-center">
               <CreditCard className="w-4 h-4" />
             </div>
@@ -131,7 +163,7 @@ export default function AdminDashboardOverview() {
               ${(activeUsersCount * 9990).toLocaleString('es-CL')} CLP
             </span>
             <span className="text-[11px] text-[#7d6f6b] block mt-1">
-              Cobro mensual Mercado Pago
+              $9.990 CLP mensual / suscriptor
             </span>
           </div>
         </div>
@@ -154,30 +186,36 @@ export default function AdminDashboardOverview() {
             </Link>
           </div>
 
-          <div className="divide-y divide-[#2d2220]">
-            {sessions.slice(0, 4).map((s) => (
-              <div key={s.id} className="py-3 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <img
-                    src={s.url_imagen_portada || ''}
-                    alt={s.titulo}
-                    className="w-10 h-10 rounded-xl object-cover bg-[#2d2220] shrink-0"
-                  />
-                  <div className="min-w-0">
-                    <p className="font-medium text-xs text-[#fbf7f4] truncate">{s.titulo}</p>
-                    <span className="text-[10px] text-[#a89b97]">
-                      {s.categoria?.nombre} • {Math.round(s.duracion / 60)} min
-                    </span>
+          {loading ? (
+            <div className="py-6 text-center text-xs text-[#7d6f6b] animate-pulse">Cargando...</div>
+          ) : sessions.length === 0 ? (
+            <div className="py-6 text-center text-xs text-[#7d6f6b]">No hay sesiones en Firestore aún.</div>
+          ) : (
+            <div className="divide-y divide-[#2d2220]">
+              {sessions.slice(0, 4).map((s) => (
+                <div key={s.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={s.imagen_url || s.url_imagen_portada || ''}
+                      alt={s.titulo}
+                      className="w-10 h-10 rounded-xl object-cover bg-[#2d2220] shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-medium text-xs text-[#fbf7f4] truncate">{s.titulo}</p>
+                      <span className="text-[10px] text-[#a89b97]">
+                        {Math.round(s.duracion / 60)} min
+                      </span>
+                    </div>
                   </div>
+                  {s.destacado && (
+                    <span className="text-[10px] text-[#b98d76] bg-[#140f0e] px-2 py-0.5 rounded-full border border-[#2d2220] shrink-0">
+                      Destacada
+                    </span>
+                  )}
                 </div>
-                {s.destacado && (
-                  <span className="text-[10px] text-[#b98d76] bg-[#140f0e] px-2 py-0.5 rounded-full border border-[#2d2220] shrink-0">
-                    Destacada
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Últimos Usuarios Registrados */}
@@ -195,29 +233,35 @@ export default function AdminDashboardOverview() {
             </Link>
           </div>
 
-          <div className="divide-y divide-[#2d2220]">
-            {users.slice(0, 4).map((u) => (
-              <div key={u.id} className="py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-medium text-xs text-[#fbf7f4] truncate">
-                    {u.nombre_completo || u.email}
-                  </p>
-                  <span className="text-[10px] text-[#7d6f6b] truncate block">{u.email}</span>
+          {loading ? (
+            <div className="py-6 text-center text-xs text-[#7d6f6b] animate-pulse">Cargando...</div>
+          ) : users.length === 0 ? (
+            <div className="py-6 text-center text-xs text-[#7d6f6b]">No hay usuarios registrados aún.</div>
+          ) : (
+            <div className="divide-y divide-[#2d2220]">
+              {users.slice(0, 4).map((u) => (
+                <div key={u.id} className="py-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-xs text-[#fbf7f4] truncate">
+                      {u.nombre_completo || u.email}
+                    </p>
+                    <span className="text-[10px] text-[#7d6f6b] truncate block">{u.email}</span>
+                  </div>
+                  <span
+                    className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium shrink-0 ${
+                      u.estado_suscripcion === 'activa'
+                        ? 'bg-teal-500/10 text-teal-400 border border-teal-500/30'
+                        : u.estado_suscripcion === 'cancelada'
+                        ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                        : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                    }`}
+                  >
+                    {u.estado_suscripcion}
+                  </span>
                 </div>
-                <span
-                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-medium shrink-0 ${
-                    u.estado_suscripcion === 'activa'
-                      ? 'bg-teal-500/10 text-teal-400 border border-teal-500/30'
-                      : u.estado_suscripcion === 'cancelada'
-                      ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                      : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                  }`}
-                >
-                  {u.estado_suscripcion}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

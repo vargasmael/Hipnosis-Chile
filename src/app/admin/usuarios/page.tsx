@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import {
   Users,
   Search,
@@ -8,51 +10,64 @@ import {
   AlertCircle,
   XCircle,
   Shield,
-  CreditCard,
-  SlidersHorizontal,
-  Mail,
-  Calendar
 } from 'lucide-react';
-import { MOCK_USUARIOS } from '@/lib/data/mockData';
 import { Usuario, EstadoSuscripcion } from '@/types/database';
 
 export default function AdminUsuariosPage() {
-  const [users, setUsers] = useState<Usuario[]>(MOCK_USUARIOS);
+  const [users, setUsers] = useState<Usuario[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EstadoSuscripcion>('all');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('reprograma_admin_usuarios');
-        if (saved) setUsers(JSON.parse(saved));
-      } catch {
-        // fallback
-      }
-    }
-  }, []);
-
-  const saveToStorage = (updated: Usuario[]) => {
-    setUsers(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('reprograma_admin_usuarios', JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'usuarios'));
+      const list: Usuario[] = [];
+      snap.forEach((d) => {
+        const data = d.data();
+        list.push({
+          id: d.id,
+          email: data.email || '',
+          nombre_completo: data.nombre_completo || '',
+          estado_suscripcion: data.estado_suscripcion || 'inactiva',
+          rol: data.rol || 'user',
+          id_suscripcion_mercadopago: data.id_suscripcion_mercadopago || null,
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString(),
+        });
+      });
+      setUsers(list);
+    } catch (err) {
+      console.warn('Error al cargar usuarios de Firestore:', err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const handleChangeStatus = (userId: string, newStatus: EstadoSuscripcion) => {
-    const updated = users.map((u) => (u.id === userId ? { ...u, estado_suscripcion: newStatus } : u));
-    saveToStorage(updated);
-    showToast(`Estado de membresía cambiado a: ${newStatus}`);
+  const handleChangeStatus = async (userId: string, newStatus: EstadoSuscripcion) => {
+    try {
+      await updateDoc(doc(db, 'usuarios', userId), {
+        estado_suscripcion: newStatus,
+        updated_at: new Date().toISOString(),
+      });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, estado_suscripcion: newStatus } : u))
+      );
+      showToast(`Estado de membresía actualizado a: ${newStatus}`);
+    } catch (err: any) {
+      showToast(err?.message || 'Error al actualizar estado en Firestore');
+    }
   };
 
   const filteredUsers = users.filter((u) => {
@@ -110,13 +125,13 @@ export default function AdminUsuariosPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1716] border border-[#3b2c29] text-[11px] font-semibold text-[#b98d76] mb-2">
             <Users className="w-3.5 h-3.5 text-[#a55850]" />
-            <span>Base de Miembros & Suscriptores</span>
+            <span>Base de Miembros (Firestore)</span>
           </div>
           <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
             Gestión de Usuarios
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Monitorea el estado de suscripción y gestiona accesos para pruebas o atención personalizada.
+            Monitorea el estado de suscripción de los miembros directamente en la colección `usuarios` de Firestore.
           </p>
         </div>
 
@@ -183,73 +198,89 @@ export default function AdminUsuariosPage() {
       </div>
 
       {/* Tabla de Usuarios */}
-      <div className="border border-[#3b2c29] rounded-3xl overflow-hidden bg-[#1e1716] shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#140f0e] text-[#7d6f6b] uppercase text-[10px] tracking-wider border-b border-[#2d2220]">
-              <tr>
-                <th className="py-3.5 px-5">Usuario</th>
-                <th className="py-3.5 px-4">Rol</th>
-                <th className="py-3.5 px-4">ID Mercado Pago</th>
-                <th className="py-3.5 px-4">Estado Membresía</th>
-                <th className="py-3.5 px-4 text-right">Modificar Acceso</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#2d2220] text-[#c7b9b4]">
-              {filteredUsers.map((u) => (
-                <tr key={u.id} className="hover:bg-[#251d1c]/50 transition-colors">
-                  <td className="py-3.5 px-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#2d2220] text-[#b98d76] flex items-center justify-center font-bold text-xs shrink-0 border border-[#3b2c29]">
-                        {u.email.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-xs text-[#fbf7f4] truncate">
-                          {u.nombre_completo || u.email.split('@')[0]}
-                        </p>
-                        <p className="text-[11px] text-[#7d6f6b] truncate">
-                          {u.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-semibold ${
-                        u.rol === 'admin'
-                          ? 'bg-[#a55850]/20 text-[#d8aba1] border border-[#a55850]/40'
-                          : 'bg-[#140f0e] text-[#a89b97] border border-[#2d2220]'
-                      }`}
-                    >
-                      {u.rol === 'admin' && <Shield className="w-3 h-3" />}
-                      {u.rol}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 font-mono text-[11px] text-[#8b7d78]">
-                    {u.id_suscripcion_mercadopago || 'Sin suscripción activa'}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    {getStatusBadge(u.estado_suscripcion)}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <select
-                      value={u.estado_suscripcion}
-                      onChange={(e) =>
-                        handleChangeStatus(u.id, e.target.value as EstadoSuscripcion)
-                      }
-                      className="px-2.5 py-1.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-xs text-[#ece5e2] focus:outline-none focus:border-[#a55850] cursor-pointer"
-                    >
-                      <option value="activa">Activa</option>
-                      <option value="inactiva">Inactiva</option>
-                      <option value="cancelada">Cancelada</option>
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {loading ? (
+        <div className="py-20 text-center text-xs text-[#a89b97] bg-[#1e1716] rounded-3xl border border-[#2d2220] animate-pulse">
+          Consultando usuarios en Firestore...
         </div>
-      </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
+          <Users className="w-12 h-12 mx-auto text-[#b98d76] opacity-60" />
+          <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
+            No se encontraron usuarios
+          </h3>
+          <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
+            Aún no hay registros en la colección `usuarios` o no coinciden con los filtros aplicados.
+          </p>
+        </div>
+      ) : (
+        <div className="border border-[#3b2c29] rounded-3xl overflow-hidden bg-[#1e1716] shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#140f0e] text-[#7d6f6b] uppercase text-[10px] tracking-wider border-b border-[#2d2220]">
+                <tr>
+                  <th className="py-3.5 px-5">Usuario</th>
+                  <th className="py-3.5 px-4">Rol</th>
+                  <th className="py-3.5 px-4">ID Mercado Pago</th>
+                  <th className="py-3.5 px-4">Estado Membresía</th>
+                  <th className="py-3.5 px-4 text-right">Modificar Acceso</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2d2220] text-[#c7b9b4]">
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="hover:bg-[#251d1c]/50 transition-colors">
+                    <td className="py-3.5 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#2d2220] text-[#b98d76] flex items-center justify-center font-bold text-xs shrink-0 border border-[#3b2c29]">
+                          {u.email.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-xs text-[#fbf7f4] truncate">
+                            {u.nombre_completo || u.email.split('@')[0]}
+                          </p>
+                          <p className="text-[11px] text-[#7d6f6b] truncate">
+                            {u.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-semibold ${
+                          u.rol === 'admin'
+                            ? 'bg-[#a55850]/20 text-[#d8aba1] border border-[#a55850]/40'
+                            : 'bg-[#140f0e] text-[#a89b97] border border-[#2d2220]'
+                        }`}
+                      >
+                        {u.rol === 'admin' && <Shield className="w-3 h-3" />}
+                        {u.rol}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-[11px] text-[#8b7d78]">
+                      {u.id_suscripcion_mercadopago || 'Sin suscripción activa'}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {getStatusBadge(u.estado_suscripcion)}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <select
+                        value={u.estado_suscripcion}
+                        onChange={(e) =>
+                          handleChangeStatus(u.id, e.target.value as EstadoSuscripcion)
+                        }
+                        className="px-2.5 py-1.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-xs text-[#ece5e2] focus:outline-none focus:border-[#a55850] cursor-pointer"
+                      >
+                        <option value="activa">Activa</option>
+                        <option value="inactiva">Inactiva</option>
+                        <option value="cancelada">Cancelada</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

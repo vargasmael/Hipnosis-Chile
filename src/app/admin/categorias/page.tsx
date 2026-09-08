@@ -1,47 +1,61 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+} from 'firebase/firestore';
 import {
   FolderTree,
   Plus,
   Trash2,
   Edit2,
   CheckCircle2,
-  Sparkles,
   X
 } from 'lucide-react';
-import { MOCK_CATEGORIAS } from '@/lib/data/mockData';
 import { Categoria } from '@/types/database';
 
 export default function AdminCategoriasPage() {
-  const [categories, setCategories] = useState<Categoria[]>(MOCK_CATEGORIAS);
+  const [categories, setCategories] = useState<Categoria[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Categoria | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('reprograma_admin_categorias');
-        if (saved) setCategories(JSON.parse(saved));
-      } catch {
-        // fallback
-      }
-    }
-  }, []);
-
-  const saveToStorage = (updated: Categoria[]) => {
-    setCategories(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('reprograma_admin_categorias', JSON.stringify(updated));
-      } catch {
-        // ignore
-      }
+  const fetchCategorias = async () => {
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'categorias'));
+      const list: Categoria[] = [];
+      snap.forEach((d) => {
+        const data = d.data();
+        list.push({
+          id: d.id,
+          nombre: data.nombre || '',
+          slug: data.slug || data.nombre?.toLowerCase().replace(/\s+/g, '-') || d.id,
+          descripcion: data.descripcion || '',
+          orden: Number(data.orden) || 0,
+        });
+      });
+      list.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+      setCategories(list);
+    } catch (err) {
+      console.warn('Error al cargar categorías de Firestore:', err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchCategorias();
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -62,40 +76,41 @@ export default function AdminCategoriasPage() {
     setShowModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingCategory) {
-      const updated = categories.map((c) =>
-        c.id === editingCategory.id
-          ? {
-              ...c,
-              nombre: name,
-              slug: name.toLowerCase().replace(/\s+/g, '-'),
-              descripcion: description,
-            }
-          : c
-      );
-      saveToStorage(updated);
-      showToast('Categoría actualizada con éxito');
-    } else {
-      const newCat: Categoria = {
-        id: `cat-${Date.now()}`,
-        nombre: name,
-        slug: name.toLowerCase().replace(/\s+/g, '-'),
-        descripcion: description,
-        orden: categories.length + 1,
-      };
-      const updated = [...categories, newCat];
-      saveToStorage(updated);
-      showToast('Categoría creada exitosamente');
+    try {
+      if (editingCategory) {
+        await updateDoc(doc(db, 'categorias', editingCategory.id), {
+          nombre: name,
+          slug: name.toLowerCase().replace(/\s+/g, '-'),
+          descripcion: description,
+        });
+        showToast('Categoría actualizada con éxito en Firestore');
+      } else {
+        await addDoc(collection(db, 'categorias'), {
+          nombre: name,
+          slug: name.toLowerCase().replace(/\s+/g, '-'),
+          descripcion: description,
+          orden: categories.length + 1,
+          created_at: new Date().toISOString(),
+        });
+        showToast('Categoría creada exitosamente en Firestore');
+      }
+      await fetchCategorias();
+      setShowModal(false);
+    } catch (err: any) {
+      showToast(err?.message || 'Error al guardar categoría');
     }
-    setShowModal(false);
   };
 
-  const handleDelete = (id: string) => {
-    const updated = categories.filter((c) => c.id !== id);
-    saveToStorage(updated);
-    showToast('Categoría eliminada');
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'categorias', id));
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      showToast('Categoría eliminada de Firestore');
+    } catch (err: any) {
+      showToast('Error al eliminar categoría');
+    }
   };
 
   return (
@@ -113,13 +128,13 @@ export default function AdminCategoriasPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1716] border border-[#3b2c29] text-[11px] font-semibold text-[#b98d76] mb-2">
             <FolderTree className="w-3.5 h-3.5 text-[#a55850]" />
-            <span>Taxonomía de Contenidos</span>
+            <span>Taxonomía de Contenidos (Firestore)</span>
           </div>
           <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
             Categorías Terapéuticas
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Organiza las temáticas de sanación para facilitar la navegación de los miembros.
+            Organiza las temáticas de sanación conectando directamente con Firestore.
           </p>
         </div>
 
@@ -133,49 +148,71 @@ export default function AdminCategoriasPage() {
       </div>
 
       {/* Grid de Categorías */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-        {categories.map((cat, idx) => (
-          <div
-            key={cat.id}
-            className="p-6 rounded-3xl bg-[#1e1716] border border-[#3b2c29] hover:border-[#a55850]/40 transition-all shadow-xl space-y-3 flex flex-col justify-between"
+      {loading ? (
+        <div className="py-20 text-center text-xs text-[#a89b97] bg-[#1e1716] rounded-3xl border border-[#2d2220] animate-pulse">
+          Consultando categorías en Firestore...
+        </div>
+      ) : categories.length === 0 ? (
+        <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
+          <FolderTree className="w-12 h-12 mx-auto text-[#b98d76] opacity-60" />
+          <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
+            No hay categorías registradas aún
+          </h3>
+          <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
+            Crea la primera categoría en Firestore para organizar las inducciones guiadas.
+          </p>
+          <button
+            onClick={handleOpenCreate}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a55850] text-white text-xs font-medium shadow"
           >
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] font-mono text-[#b98d76] bg-[#140f0e] px-2.5 py-1 rounded-full border border-[#2d2220]">
-                  Posición #{idx + 1}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleOpenEdit(cat)}
-                    className="p-1.5 text-[#7d6f6b] hover:text-[#ece5e2] hover:bg-[#140f0e] rounded-lg transition-colors"
-                    title="Editar categoría"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(cat.id)}
-                    className="p-1.5 text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] rounded-lg transition-colors"
-                    title="Eliminar categoría"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+            <Plus className="w-4 h-4" /> Crear Categoría
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {categories.map((cat, idx) => (
+            <div
+              key={cat.id}
+              className="p-6 rounded-3xl bg-[#1e1716] border border-[#3b2c29] hover:border-[#a55850]/40 transition-all shadow-xl space-y-3 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-mono text-[#b98d76] bg-[#140f0e] px-2.5 py-1 rounded-full border border-[#2d2220]">
+                    Posición #{idx + 1}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenEdit(cat)}
+                      className="p-1.5 text-[#7d6f6b] hover:text-[#ece5e2] hover:bg-[#140f0e] rounded-lg transition-colors"
+                      title="Editar categoría"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(cat.id)}
+                      className="p-1.5 text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] rounded-lg transition-colors"
+                      title="Eliminar categoría"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
+
+                <h3 className="font-serif-persona text-lg text-[#fbf7f4] font-normal">
+                  {cat.nombre}
+                </h3>
+                <p className="text-xs text-[#a89b97] mt-1.5 font-light leading-relaxed">
+                  {cat.descripcion || 'Sin descripción asignada.'}
+                </p>
               </div>
 
-              <h3 className="font-serif-persona text-lg text-[#fbf7f4] font-normal">
-                {cat.nombre}
-              </h3>
-              <p className="text-xs text-[#a89b97] mt-1.5 font-light leading-relaxed">
-                {cat.descripcion || 'Sin descripción asignada.'}
-              </p>
+              <div className="pt-3 border-t border-[#2d2220] flex items-center justify-between text-[11px] text-[#7d6f6b]">
+                <span>Slug: /{cat.slug}</span>
+              </div>
             </div>
-
-            <div className="pt-3 border-t border-[#2d2220] flex items-center justify-between text-[11px] text-[#7d6f6b]">
-              <span>Slug: /{cat.slug}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Modal Crear / Editar Categoría */}
       {showModal && (

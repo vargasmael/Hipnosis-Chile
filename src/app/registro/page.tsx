@@ -3,7 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { auth, db } from '@/lib/firebase';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowRight, Lock, Mail, User, AlertCircle, Feather } from 'lucide-react';
 
@@ -22,33 +24,45 @@ export default function RegistroPage() {
     setErrorMsg(null);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // 1. Crear usuario con Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      try {
+        await updateProfile(userCredential.user, { displayName: nombre });
+      } catch {
+        // ignore profile display name error
+      }
+
+      // 2. Crear automáticamente un documento en la colección 'usuarios' con su uid, email y estado_suscripcion: "inactiva"
+      const userDoc = {
+        uid,
+        id: uid,
         email,
-        password,
-        options: {
-          data: {
-            nombre_completo: nombre,
-            estado_suscripcion: 'inactiva',
-            rol: 'user',
-          },
-        },
-      });
+        nombre_completo: nombre,
+        estado_suscripcion: 'inactiva',
+        rol: 'user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        setErrorMsg(error.message);
-        setLoading(false);
-        return;
-      }
+      await setDoc(doc(db, 'usuarios', uid), userDoc);
 
-      if (data?.user) {
-        await refreshUser();
-      }
-
+      await refreshUser();
       setLoading(false);
-      // Redirigir exitosamente al usuario a /suscripcion según requerimiento
+
+      // 3. Redirige a /suscripcion al ser un nuevo usuario inactivo
       router.push('/suscripcion');
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Error al procesar el registro con Supabase');
+      let msg = err?.message || 'Error al procesar el registro con Firebase';
+      if (err.code === 'auth/email-already-in-use') {
+        msg = 'Este correo electrónico ya está registrado. Por favor inicia sesión.';
+      } else if (err.code === 'auth/weak-password') {
+        msg = 'La contraseña debe tener al menos 6 caracteres.';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'El formato del correo ingresado no es válido.';
+      }
+      setErrorMsg(msg);
       setLoading(false);
     }
   };

@@ -1,13 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { auth, db } from '@/lib/firebase';
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  updateProfile,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Usuario, EstadoSuscripcion, RolUsuario } from '@/types/database';
 
 interface AuthContextType {
   user: Usuario | null;
   isLoading: boolean;
-  signIn: (email: string, pass: string) => Promise<{ error?: string }>;
+  signIn: (email: string, pass: string) => Promise<{ error?: string; estado_suscripcion?: EstadoSuscripcion }>;
   signUp: (email: string, pass: string, nombre: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -35,45 +43,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserProfile = async (authUserId: string, email: string) => {
+  const fetchUserProfile = async (uid: string, email: string): Promise<Usuario> => {
     try {
-      // 1. Intentar leer de la tabla 'profiles' (nueva estándar Fase 5)
-      let { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authUserId)
-        .single();
+      const userDocRef = doc(db, 'usuarios', uid);
+      const docSnap = await getDoc(userDocRef);
 
-      // 2. Si falla o no existe, intentar de la tabla legacy 'usuarios'
-      if (error || !data) {
-        const resUsuarios = await supabase
-          .from('usuarios')
-          .select('*')
-          .eq('id', authUserId)
-          .single();
-        if (resUsuarios.data) {
-          data = resUsuarios.data;
-          error = null;
-        }
-      }
-
-      if (data && !error) {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
         const u: Usuario = {
-          id: data.id,
+          id: uid,
           email: data.email || email,
           nombre_completo: data.nombre_completo || email.split('@')[0],
           estado_suscripcion: data.estado_suscripcion || 'inactiva',
           rol: data.rol || 'user',
-          id_suscripcion_mercadopago: data.mercadopago_customer_id || data.id_suscripcion_mercadopago || null,
+          id_suscripcion_mercadopago: data.id_suscripcion_mercadopago || null,
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
         };
         setUser(u);
         syncUserCookies(u);
+        return u;
       } else {
-        // Usuario autenticado en auth.users pero sin fila en profiles aún
-        const u: Usuario = {
-          id: authUserId,
+        // Si el documento en Firestore aún no existe, crearlo
+        const newUserData: Usuario = {
+          id: uid,
           email,
           nombre_completo: email.split('@')[0],
           estado_suscripcion: 'inactiva',
@@ -81,12 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-        setUser(u);
-        syncUserCookies(u);
+        await setDoc(userDocRef, newUserData);
+        setUser(newUserData);
+        syncUserCookies(newUserData);
+        return newUserData;
       }
-    } catch {
-      const u: Usuario = {
-        id: authUserId,
+    } catch (err) {
+      console.warn('Error al obtener perfil en Firestore:', err);
+      const fallbackUser: Usuario = {
+        id: uid,
         email,
         nombre_completo: email.split('@')[0],
         estado_suscripcion: 'inactiva',
@@ -94,13 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      setUser(u);
-      syncUserCookies(u);
+      setUser(fallbackUser);
+      syncUserCookies(fallbackUser);
+      return fallbackUser;
     }
   };
 
   useEffect(() => {
-    // Revisar usuario demo guardado
+    // Revisar si hay un usuario demo guardado
     const savedDemo = typeof window !== 'undefined' ? localStorage.getItem('hipnosis_demo_user') : null;
     if (savedDemo) {
       try {
@@ -113,24 +110,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Comprobar sesión de Supabase Auth
     try {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user) {
-          fetchUserProfile(session.user.id, session.user.email || '');
-        } else {
-          setUser(null);
-        }
-        setIsLoading(false);
-      }).catch(() => {
-        setIsLoading(false);
-      });
-
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user) {
-          fetchUserProfile(session.user.id, session.user.email || '');
+      const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          await fetchUserProfile(firebaseUser.uid, firebaseUser.email || '');
         } else {
           setUser(null);
           syncUserCookies(null);
@@ -138,91 +121,78 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       });
 
-      return () => {
-        subscription.unsubscribe();
-      };
+      return () => unsubscribe();
     } catch {
       setIsLoading(false);
     }
   }, []);
 
-  const signIn = async (email: string, pass: string): Promise<{ error?: string }> => {
+  const signIn = async (email: string, pass: string): Promise<{ error?: string; estado_suscripcion?: EstadoSuscripcion }> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pass,
-      });
-
-      if (error) {
-        // Si no hay conexión o falla en demo, dar soporte rápido
-        if (email.includes('admin')) {
-          setDemoUser('activa', 'admin');
-          return {};
-        }
-        if (email.includes('activo') || email.includes('suscriptor')) {
-          setDemoUser('activa', 'user');
-          return {};
-        }
-        return { error: error.message };
-      }
-
-      if (data.user) {
-        await fetchUserProfile(data.user.id, data.user.email || email);
-      }
-      return {};
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      const u = await fetchUserProfile(userCredential.user.uid, userCredential.user.email || email);
+      return { estado_suscripcion: u.estado_suscripcion };
     } catch (err: any) {
+      // Si Firebase no tiene credenciales en dev o es usuario demo:
       if (email.includes('admin')) {
         setDemoUser('activa', 'admin');
-        return {};
+        return { estado_suscripcion: 'activa' };
       }
       if (email.includes('activo') || email.includes('suscriptor')) {
         setDemoUser('activa', 'user');
-        return {};
+        return { estado_suscripcion: 'activa' };
       }
-      return { error: err?.message || 'Error al iniciar sesión' };
+      if (email.includes('inactivo')) {
+        setDemoUser('inactiva', 'user');
+        return { estado_suscripcion: 'inactiva' };
+      }
+      return { error: err?.message || 'Error al iniciar sesión con Firebase' };
     }
   };
 
   const signUp = async (email: string, pass: string, nombre: string): Promise<{ error?: string }> => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      const uid = userCredential.user.uid;
+
+      try {
+        await updateProfile(userCredential.user, { displayName: nombre });
+      } catch {
+        // ignore profile displayName error
+      }
+
+      // Crear documento en la colección 'usuarios' con su uid, email y estado_suscripcion: "inactiva"
+      const newDoc = {
+        uid,
+        id: uid,
         email,
-        password: pass,
-        options: {
-          data: {
-            nombre_completo: nombre,
-            estado_suscripcion: 'inactiva',
-            rol: 'user',
-          },
-        },
-      });
+        nombre_completo: nombre,
+        estado_suscripcion: 'inactiva' as EstadoSuscripcion,
+        rol: 'user' as RolUsuario,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) {
-        // Fallback local si supabase no está conectado aún en local
-        const newUser: Usuario = {
-          id: `usr_${Date.now()}`,
-          email,
-          nombre_completo: nombre,
-          estado_suscripcion: 'inactiva',
-          rol: 'user',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-        setUser(newUser);
-        syncUserCookies(newUser);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('hipnosis_demo_user', JSON.stringify(newUser));
-        }
-        return {};
-      }
+      await setDoc(doc(db, 'usuarios', uid), newDoc);
 
-      if (data.user) {
-        await fetchUserProfile(data.user.id, email);
-      }
+      const u: Usuario = {
+        id: uid,
+        email,
+        nombre_completo: nombre,
+        estado_suscripcion: 'inactiva',
+        rol: 'user',
+        created_at: newDoc.created_at,
+        updated_at: newDoc.updated_at,
+      };
+
+      setUser(u);
+      syncUserCookies(u);
       return {};
-    } catch {
+    } catch (err: any) {
+      // Fallback local en desarrollo
+      const fallbackId = `usr_${Date.now()}`;
       const newUser: Usuario = {
-        id: `usr_${Date.now()}`,
+        id: fallbackId,
         email,
         nombre_completo: nombre,
         estado_suscripcion: 'inactiva',
@@ -241,7 +211,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      await firebaseSignOut(auth);
     } catch {
       // ignore
     }
@@ -253,8 +223,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshUser = async () => {
-    if (user?.id) {
-      await fetchUserProfile(user.id, user.email);
+    if (auth.currentUser) {
+      await fetchUserProfile(auth.currentUser.uid, auth.currentUser.email || '');
     }
   };
 

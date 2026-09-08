@@ -3,15 +3,16 @@
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { auth, db } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
 import { ArrowRight, Lock, Mail, AlertCircle, Feather } from 'lucide-react';
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // El requerimiento especifica: Al registrarse o iniciar sesión exitosamente, redirige al usuario a /suscripcion
-  const redirectTo = searchParams.get('redirect') || '/suscripcion';
+  const redirectTo = searchParams.get('redirect');
 
   const { refreshUser, setDemoUser } = useAuth();
   const [email, setEmail] = useState('');
@@ -25,46 +26,71 @@ function LoginForm() {
     setErrorMsg(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // 1. Autenticación real con Firebase
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
 
-      if (error) {
-        // Soporte para pruebas rápidas
-        if (email.includes('admin')) {
-          setDemoUser('activa', 'admin');
-          setLoading(false);
-          router.push('/suscripcion');
-          return;
+      // 2. Consultar documento en Firestore 'usuarios' para verificar estado_suscripcion
+      let estadoSuscripcion = 'inactiva';
+      try {
+        const docSnap = await getDoc(doc(db, 'usuarios', uid));
+        if (docSnap.exists()) {
+          estadoSuscripcion = docSnap.data().estado_suscripcion || 'inactiva';
         }
-        if (email.includes('activo') || email.includes('suscriptor')) {
-          setDemoUser('activa', 'user');
-          setLoading(false);
-          router.push('/suscripcion');
-          return;
-        }
-        setErrorMsg(error.message);
+      } catch {
+        // fallback
+      }
+
+      await refreshUser();
+      setLoading(false);
+
+      // 3. Gestión de Sesión: Redirige a /suscripcion si es inactivo, o a /dashboard si es activo
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else if (estadoSuscripcion === 'activa') {
+        router.push('/dashboard');
+      } else {
+        router.push('/suscripcion');
+      }
+    } catch (err: any) {
+      // Soporte rápido para testing
+      if (email.includes('admin')) {
+        setDemoUser('activa', 'admin');
         setLoading(false);
+        router.push('/dashboard');
+        return;
+      }
+      if (email.includes('activo') || email.includes('suscriptor')) {
+        setDemoUser('activa', 'user');
+        setLoading(false);
+        router.push('/dashboard');
+        return;
+      }
+      if (email.includes('inactivo')) {
+        setDemoUser('inactiva', 'user');
+        setLoading(false);
+        router.push('/suscripcion');
         return;
       }
 
-      if (data?.user) {
-        await refreshUser();
+      let msg = err?.message || 'Error al iniciar sesión con Firebase';
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        msg = 'Correo o contraseña incorrectos.';
+      } else if (err.code === 'auth/invalid-email') {
+        msg = 'El formato del correo no es válido.';
       }
-
-      setLoading(false);
-      // Redirigir a /suscripcion según requerimiento
-      router.push(redirectTo);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Error al iniciar sesión con Supabase');
+      setErrorMsg(msg);
       setLoading(false);
     }
   };
 
-  const handleQuickDemo = (role: 'user' | 'admin') => {
-    setDemoUser('activa', role);
-    router.push('/suscripcion');
+  const handleQuickDemo = (role: 'user' | 'admin', sub: 'activa' | 'inactiva' = 'activa') => {
+    setDemoUser(sub, role);
+    if (sub === 'activa') {
+      router.push(role === 'admin' ? '/admin' : '/dashboard');
+    } else {
+      router.push('/suscripcion');
+    }
   };
 
   return (
@@ -143,19 +169,26 @@ function LoginForm() {
         {/* Acceso rápido de prueba */}
         <div className="pt-4 border-t border-[#2d2220] text-center space-y-2.5">
           <span className="text-[11px] text-[#7d6f6b] block">
-            Acceso Rápido para Testing / Demostración:
+            Acceso Rápido para Demostración:
           </span>
           <div className="flex items-center justify-center gap-2">
             <button
               type="button"
-              onClick={() => handleQuickDemo('user')}
+              onClick={() => handleQuickDemo('user', 'activa')}
               className="px-3 py-1.5 rounded-full bg-[#140f0e] hover:bg-[#251d1c] text-[#b98d76] text-xs font-medium border border-[#332623] transition-colors"
             >
               Suscriptor Activo
             </button>
             <button
               type="button"
-              onClick={() => handleQuickDemo('admin')}
+              onClick={() => handleQuickDemo('user', 'inactiva')}
+              className="px-3 py-1.5 rounded-full bg-[#140f0e] hover:bg-[#251d1c] text-[#a89b97] text-xs font-medium border border-[#332623] transition-colors"
+            >
+              Inactivo
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickDemo('admin', 'activa')}
               className="px-3 py-1.5 rounded-full bg-[#140f0e] hover:bg-[#251d1c] text-[#d8aba1] text-xs font-medium border border-[#332623] transition-colors"
             >
               Administrador

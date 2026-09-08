@@ -1,14 +1,24 @@
-import { supabase } from '@/lib/supabaseClient';
-import { Categoria, Sesion, ProgresoFavorito } from '@/types/database';
+import { db } from '@/lib/firebase';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  doc,
+  updateDoc,
+  deleteDoc,
+  query,
+  orderBy,
+  where,
+  setDoc,
+} from 'firebase/firestore';
+import { Categoria, Sesion } from '@/types/database';
 
 /**
- * Normaliza un objeto de sesión proveniente de Supabase
- * (Soporta tanto el esquema nuevo: audio_url, imagen_url, categoria_id
- * como el esquema anterior: url_archivo_multimedia, url_imagen_portada, id_categoria)
+ * Normaliza un documento proveniente de Firestore
  */
-export function normalizeSesion(data: any): Sesion {
+export function normalizeFirestoreSesion(id: string, data: any): Sesion {
   return {
-    id: data.id,
+    id,
     titulo: data.titulo || 'Sesión sin título',
     descripcion: data.descripcion || '',
     id_categoria: data.categoria_id || data.id_categoria || '',
@@ -30,37 +40,40 @@ export function normalizeSesion(data: any): Sesion {
 }
 
 /**
- * Servicio para obtener categorías reales desde Supabase
+ * Obtener categorías desde la colección 'categorias' de Firestore
  */
 export async function getCategorias(): Promise<Categoria[]> {
   try {
-    const { data, error } = await supabase
-      .from('categorias')
-      .select('*')
-      .order('orden', { ascending: true });
+    const colRef = collection(db, 'categorias');
+    const snapshot = await getDocs(colRef);
 
-    if (error || !data) {
-      console.warn('No se pudieron obtener categorías de Supabase:', error?.message);
+    if (snapshot.empty) {
       return [];
     }
 
-    return data.map((c: any) => ({
-      id: c.id,
-      nombre: c.nombre,
-      slug: c.slug || c.nombre.toLowerCase().replace(/\s+/g, '-'),
-      descripcion: c.descripcion,
-      orden: c.orden ?? 0,
-      icono: c.icono,
-      created_at: c.created_at,
-    }));
+    const categories: Categoria[] = [];
+    snapshot.forEach((d) => {
+      const data = d.data();
+      categories.push({
+        id: d.id,
+        nombre: data.nombre || '',
+        slug: data.slug || data.nombre?.toLowerCase().replace(/\s+/g, '-') || d.id,
+        descripcion: data.descripcion || '',
+        orden: Number(data.orden) || 0,
+        icono: data.icono || null,
+        created_at: data.created_at,
+      });
+    });
+
+    return categories.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
   } catch (err) {
-    console.warn('Error en getCategorias:', err);
+    console.warn('Error al obtener categorías de Firestore:', err);
     return [];
   }
 }
 
 /**
- * Servicio para obtener sesiones reales desde Supabase
+ * Obtener sesiones desde la colección 'sesiones' de Firestore
  */
 export async function getSesiones(options?: {
   categoriaId?: string;
@@ -69,26 +82,37 @@ export async function getSesiones(options?: {
   duracionMaxMinutos?: number;
 }): Promise<Sesion[]> {
   try {
-    let query = supabase.from('sesiones').select('*, categoria:categorias(*)');
+    const colRef = collection(db, 'sesiones');
+    const snapshot = await getDocs(colRef);
 
-    if (options?.categoriaId) {
-      query = query.or(`categoria_id.eq.${options.categoriaId},id_categoria.eq.${options.categoriaId}`);
-    }
-    if (options?.destacadas) {
-      query = query.eq('destacado', true);
-    }
-    if (options?.busqueda) {
-      query = query.ilike('titulo', `%${options.busqueda}%`);
-    }
-
-    const { data, error } = await query;
-
-    if (error || !data) {
-      console.warn('No se pudieron obtener sesiones de Supabase:', error?.message);
+    if (snapshot.empty) {
       return [];
     }
 
-    let sessions = data.map(normalizeSesion);
+    let sessions: Sesion[] = [];
+    snapshot.forEach((d) => {
+      sessions.push(normalizeFirestoreSesion(d.id, d.data()));
+    });
+
+    if (options?.categoriaId) {
+      sessions = sessions.filter(
+        (s) => s.categoria_id === options.categoriaId || s.id_categoria === options.categoriaId
+      );
+    }
+
+    if (options?.destacadas) {
+      sessions = sessions.filter((s) => s.destacado);
+    }
+
+    if (options?.busqueda) {
+      const q = options.busqueda.toLowerCase();
+      sessions = sessions.filter(
+        (s) =>
+          s.titulo.toLowerCase().includes(q) ||
+          s.descripcion.toLowerCase().includes(q) ||
+          s.guia_o_autor.toLowerCase().includes(q)
+      );
+    }
 
     if (options?.duracionMaxMinutos) {
       sessions = sessions.filter((s) => s.duracion <= options.duracionMaxMinutos! * 60);
@@ -96,13 +120,43 @@ export async function getSesiones(options?: {
 
     return sessions;
   } catch (err) {
-    console.warn('Error en getSesiones:', err);
+    console.warn('Error al obtener sesiones de Firestore:', err);
     return [];
   }
 }
 
 /**
- * Guarda o actualiza el progreso de reproducción en Supabase
+ * Crear nueva sesión en la colección 'sesiones' de Firestore
+ */
+export async function createSesion(sessionData: Omit<Sesion, 'id'>): Promise<string> {
+  const colRef = collection(db, 'sesiones');
+  const docRef = await addDoc(colRef, {
+    ...sessionData,
+    created_at: new Date().toISOString(),
+  });
+  return docRef.id;
+}
+
+/**
+ * Eliminar sesión de Firestore
+ */
+export async function deleteSesion(id: string): Promise<void> {
+  const docRef = doc(db, 'sesiones', id);
+  await deleteDoc(docRef);
+}
+
+/**
+ * Alternar estado destacado de una sesión en Firestore
+ */
+export async function toggleSesionDestacado(id: string, currentState: boolean): Promise<boolean> {
+  const docRef = doc(db, 'sesiones', id);
+  const nextState = !currentState;
+  await updateDoc(docRef, { destacado: nextState });
+  return nextState;
+}
+
+/**
+ * Guarda o actualiza progreso en Firestore (colección 'progreso_favoritos')
  */
 export async function saveProgreso(
   userId: string,
@@ -111,9 +165,11 @@ export async function saveProgreso(
   completado: boolean = false
 ): Promise<void> {
   if (!userId || !sesionId) return;
-
   try {
-    await supabase.from('progreso_favoritos').upsert(
+    const docKey = `${userId}_${sesionId}`;
+    const docRef = doc(db, 'progreso_favoritos', docKey);
+    await setDoc(
+      docRef,
       {
         id_usuario: userId,
         id_sesion: sesionId,
@@ -121,15 +177,15 @@ export async function saveProgreso(
         completado,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'id_usuario,id_sesion' }
+      { merge: true }
     );
   } catch (err) {
-    console.warn('Progreso guardado localmente (Supabase no accesible):', err);
+    console.warn('Error al guardar progreso en Firestore:', err);
   }
 }
 
 /**
- * Marca o desmarca una sesión como favorita
+ * Alternar favorito en Firestore y localStorage
  */
 export async function toggleFavorito(
   userId: string,
@@ -155,23 +211,26 @@ export async function toggleFavorito(
   if (!userId || !sesionId) return nuevoEstado;
 
   try {
-    const { error } = await supabase.from('progreso_favoritos').upsert(
+    const docKey = `${userId}_${sesionId}`;
+    const docRef = doc(db, 'progreso_favoritos', docKey);
+    await setDoc(
+      docRef,
       {
         id_usuario: userId,
         id_sesion: sesionId,
         es_favorito: nuevoEstado,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: 'id_usuario,id_sesion' }
+      { merge: true }
     );
-    return !error;
+    return !nuevoEstado;
   } catch {
     return nuevoEstado;
   }
 }
 
 /**
- * Obtiene la lista de sesiones favoritas del usuario
+ * Obtener favoritos del usuario
  */
 export async function getFavoritos(userId?: string): Promise<Sesion[]> {
   try {
@@ -186,14 +245,11 @@ export async function getFavoritos(userId?: string): Promise<Sesion[]> {
 
     if (userId) {
       try {
-        const { data } = await supabase
-          .from('progreso_favoritos')
-          .select('id_sesion')
-          .eq('id_usuario', userId)
-          .eq('es_favorito', true);
-
-        if (data && data.length > 0) {
-          favoriteIds = data.map((d: any) => d.id_sesion);
+        const colRef = collection(db, 'progreso_favoritos');
+        const q = query(colRef, where('id_usuario', '==', userId), where('es_favorito', '==', true));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          favoriteIds = snap.docs.map((d) => d.data().id_sesion);
         }
       } catch {
         // continue

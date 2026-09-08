@@ -9,7 +9,6 @@ import { SessionCard } from '@/components/sessions/SessionCard';
 import { FeaturedCarousel } from '@/components/sessions/FeaturedCarousel';
 import { ContinueListeningRow } from '@/components/sessions/ContinueListeningRow';
 import {
-  Sparkles,
   ShieldCheck,
   Quote,
   Compass,
@@ -108,7 +107,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* 5. Catálogo Completo / Consultas reales */}
+      {/* 5. Catálogo Completo (Firestore NoSQL) */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -140,7 +139,7 @@ export default function DashboardPage() {
               No hay sesiones disponibles aún
             </h3>
             <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
-              Pronto se publicarán nuevas inducciones y frecuencias de bienestar. Revisa nuevamente más tarde o visita el panel de administración para agregarlas.
+              Pronto se publicarán nuevas inducciones y frecuencias de bienestar en Firestore. Revisa nuevamente más tarde o visita el panel de administración para agregarlas.
             </p>
           </div>
         ) : (
