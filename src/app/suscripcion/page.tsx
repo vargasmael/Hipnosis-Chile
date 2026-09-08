@@ -20,6 +20,7 @@ import {
 
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
+import { VSLPlayer } from '@/components/video/VSLPlayer';
 
 export default function SuscripcionPage() {
   const router = useRouter();
@@ -153,6 +154,15 @@ export default function SuscripcionPage() {
           </span>
         </div>
       )}
+
+      {/* 2. Video de Presentación Pre-Suscripción (VSL) */}
+      <div className="w-full max-w-2xl mb-10">
+        <VSLPlayer
+          badgeText="Carta de Presentación del Especialista"
+          title="Escucha esto antes de tomar una decisión"
+          subtitle="Una breve introducción al método de hipnosis y reprogramación subconsciente que experimentarás dentro del refugio."
+        />
+      </div>
 
       {/* Tarjeta de Checkout estilo Persona */}
       <div className="w-full max-w-md p-8 sm:p-10 rounded-3xl bg-[#1c1514] border-2 border-[#a55850]/50 shadow-2xl space-y-7 relative backdrop-blur-md">

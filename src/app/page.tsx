@@ -24,6 +24,7 @@ import {
 import { MOCK_SESIONES } from '@/lib/data/mockData';
 import { SessionCard } from '@/components/sessions/SessionCard';
 import { usePlayer } from '@/context/PlayerContext';
+import { VSLPlayer } from '@/components/video/VSLPlayer';
 
 export default function LandingPage() {
   const { currentSession, isPlaying, playSession, togglePlay } = usePlayer();
@@ -357,6 +358,15 @@ export default function LandingPage() {
             Una sola sesión presencial de terapia o hipnosis tradicional cuesta entre $40.000 y $60.000 CLP.
             En <strong>Re-Programa</strong> tienes acompañamiento nocturno y diario ilimitado por una fracción ínfima.
           </p>
+
+          {/* Video de Presentación Pre-Suscripción (VSL) */}
+          <div className="mt-12 mb-6">
+            <VSLPlayer
+              badgeText="Carta de Presentación del Especialista"
+              title="Escucha esto antes de tomar una decisión"
+              subtitle="Una breve introducción al método de hipnosis y reprogramación subconsciente que experimentarás dentro del refugio."
+            />
+          </div>
 
           {/* Tarjeta de Precio Estilo Persona */}
           <div className="relative mt-12 max-w-lg mx-auto rounded-2xl border border-[#a55850]/60 bg-[#1e1716] p-8 sm:p-10 shadow-2xl">
