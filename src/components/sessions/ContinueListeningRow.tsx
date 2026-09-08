@@ -59,9 +59,9 @@ export function ContinueListeningRow({ items }: ContinueListeningRowProps) {
               <div className="flex items-center gap-3.5">
                 {/* Portada Mini */}
                 <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[#2d2220] flex-shrink-0">
-                  {session.url_imagen_portada ? (
+                  {(session.imagen_url || session.url_imagen_portada) ? (
                     <img
-                      src={session.url_imagen_portada}
+                      src={session.imagen_url || session.url_imagen_portada || ''}
                       alt={session.titulo}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />

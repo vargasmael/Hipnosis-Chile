@@ -1,7 +1,7 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useTransition } from 'react';
-import { createClient as createBrowserClient } from '@/lib/supabase/client';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 import { Usuario, EstadoSuscripcion, RolUsuario } from '@/types/database';
 
 interface AuthContextType {
@@ -34,23 +34,44 @@ function syncUserCookies(u: Usuario | null) {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Usuario | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [, startTransition] = useTransition();
 
   const fetchUserProfile = async (authUserId: string, email: string) => {
     try {
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from('usuarios')
+      // 1. Intentar leer de la tabla 'profiles' (nueva estándar Fase 5)
+      let { data, error } = await supabase
+        .from('profiles')
         .select('*')
         .eq('id', authUserId)
         .single();
 
+      // 2. Si falla o no existe, intentar de la tabla legacy 'usuarios'
+      if (error || !data) {
+        const resUsuarios = await supabase
+          .from('usuarios')
+          .select('*')
+          .eq('id', authUserId)
+          .single();
+        if (resUsuarios.data) {
+          data = resUsuarios.data;
+          error = null;
+        }
+      }
+
       if (data && !error) {
-        const u = data as Usuario;
+        const u: Usuario = {
+          id: data.id,
+          email: data.email || email,
+          nombre_completo: data.nombre_completo || email.split('@')[0],
+          estado_suscripcion: data.estado_suscripcion || 'inactiva',
+          rol: data.rol || 'user',
+          id_suscripcion_mercadopago: data.mercadopago_customer_id || data.id_suscripcion_mercadopago || null,
+          created_at: data.created_at || new Date().toISOString(),
+          updated_at: data.updated_at || new Date().toISOString(),
+        };
         setUser(u);
         syncUserCookies(u);
       } else {
-        // Usuario autenticado pero sin fila aún en 'usuarios'
+        // Usuario autenticado en auth.users pero sin fila en profiles aún
         const u: Usuario = {
           id: authUserId,
           email,
@@ -64,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         syncUserCookies(u);
       }
     } catch {
-      // Fallback
       const u: Usuario = {
         id: authUserId,
         email,
@@ -80,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Revisar si hay un usuario demo guardado en localStorage para testing
+    // Revisar usuario demo guardado
     const savedDemo = typeof window !== 'undefined' ? localStorage.getItem('hipnosis_demo_user') : null;
     if (savedDemo) {
       try {
@@ -93,9 +113,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Comprobar sesión de Supabase si está disponible
+    // Comprobar sesión de Supabase Auth
     try {
-      const supabase = createBrowserClient();
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session?.user) {
           fetchUserProfile(session.user.id, session.user.email || '');
@@ -114,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           fetchUserProfile(session.user.id, session.user.email || '');
         } else {
           setUser(null);
+          syncUserCookies(null);
         }
         setIsLoading(false);
       });
@@ -128,14 +148,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, pass: string): Promise<{ error?: string }> => {
     try {
-      const supabase = createBrowserClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password: pass,
       });
 
       if (error) {
-        // Si Supabase falla por falta de credenciales reales, dar soporte a modo demo
+        // Si no hay conexión o falla en demo, dar soporte rápido
         if (email.includes('admin')) {
           setDemoUser('activa', 'admin');
           return {};
@@ -152,7 +171,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return {};
     } catch (err: any) {
-      // Permitir login rápido en modo prueba si es admin o demo
       if (email.includes('admin')) {
         setDemoUser('activa', 'admin');
         return {};
@@ -167,7 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, pass: string, nombre: string): Promise<{ error?: string }> => {
     try {
-      const supabase = createBrowserClient();
       const { data, error } = await supabase.auth.signUp({
         email,
         password: pass,
@@ -181,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (error) {
-        // Simular registro en desarrollo si no hay conexión activa
+        // Fallback local si supabase no está conectado aún en local
         const newUser: Usuario = {
           id: `usr_${Date.now()}`,
           email,
@@ -192,7 +209,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           updated_at: new Date().toISOString(),
         };
         setUser(newUser);
-        localStorage.setItem('hipnosis_demo_user', JSON.stringify(newUser));
+        syncUserCookies(newUser);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('hipnosis_demo_user', JSON.stringify(newUser));
+        }
         return {};
       }
 
@@ -211,14 +231,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updated_at: new Date().toISOString(),
       };
       setUser(newUser);
-      localStorage.setItem('hipnosis_demo_user', JSON.stringify(newUser));
+      syncUserCookies(newUser);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hipnosis_demo_user', JSON.stringify(newUser));
+      }
       return {};
     }
   };
 
   const signOut = async () => {
     try {
-      const supabase = createBrowserClient();
       await supabase.auth.signOut();
     } catch {
       // ignore

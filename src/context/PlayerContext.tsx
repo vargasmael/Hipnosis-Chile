@@ -140,7 +140,8 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
     if (!isSameSession) {
       setCurrentSession(session);
-      audioRef.current.src = session.url_archivo_multimedia;
+      const audioSource = session.audio_url || session.url_archivo_multimedia;
+      audioRef.current.src = audioSource;
       audioRef.current.load();
       if (startTime > 0) {
         audioRef.current.currentTime = startTime;

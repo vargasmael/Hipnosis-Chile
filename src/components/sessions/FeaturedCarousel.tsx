@@ -40,9 +40,9 @@ export function FeaturedCarousel({ sessions }: FeaturedCarouselProps) {
     <div className="relative w-full rounded-3xl overflow-hidden bg-[#1e1716] border border-[#3b2c29] shadow-2xl">
       {/* Fondo con imagen y degradado oscuro cinemático */}
       <div className="absolute inset-0 z-0">
-        {activeSession.url_imagen_portada && (
+        {(activeSession.imagen_url || activeSession.url_imagen_portada) && (
           <img
-            src={activeSession.url_imagen_portada}
+            src={activeSession.imagen_url || activeSession.url_imagen_portada || ''}
             alt={activeSession.titulo}
             className="w-full h-full object-cover object-center filter brightness-[0.38] transition-all duration-700 scale-105"
           />

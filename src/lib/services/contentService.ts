@@ -1,29 +1,66 @@
-import { createClient as createBrowserClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabaseClient';
 import { Categoria, Sesion, ProgresoFavorito } from '@/types/database';
-import { MOCK_CATEGORIAS, MOCK_SESIONES } from '@/lib/data/mockData';
 
 /**
- * Servicio para obtener categorías
+ * Normaliza un objeto de sesión proveniente de Supabase
+ * (Soporta tanto el esquema nuevo: audio_url, imagen_url, categoria_id
+ * como el esquema anterior: url_archivo_multimedia, url_imagen_portada, id_categoria)
+ */
+export function normalizeSesion(data: any): Sesion {
+  return {
+    id: data.id,
+    titulo: data.titulo || 'Sesión sin título',
+    descripcion: data.descripcion || '',
+    id_categoria: data.categoria_id || data.id_categoria || '',
+    categoria_id: data.categoria_id || data.id_categoria || '',
+    categoria: data.categoria || undefined,
+    duracion: Number(data.duracion) || 600,
+    audio_url: data.audio_url || data.url_archivo_multimedia || '',
+    imagen_url: data.imagen_url || data.url_imagen_portada || null,
+    url_archivo_multimedia: data.audio_url || data.url_archivo_multimedia || '',
+    url_imagen_portada: data.imagen_url || data.url_imagen_portada || null,
+    tipo_multimedia: data.tipo_multimedia || 'audio',
+    destacado: Boolean(data.destacado),
+    guia_o_autor: data.guia_o_autor || 'Especialista Re-Programa',
+    veces_reproducida: Number(data.veces_reproducida) || 0,
+    tags: data.tags || [],
+    created_at: data.created_at || new Date().toISOString(),
+    updated_at: data.updated_at,
+  };
+}
+
+/**
+ * Servicio para obtener categorías reales desde Supabase
  */
 export async function getCategorias(): Promise<Categoria[]> {
   try {
-    const supabase = createBrowserClient();
     const { data, error } = await supabase
       .from('categorias')
       .select('*')
       .order('orden', { ascending: true });
 
-    if (error || !data || data.length === 0) {
-      return MOCK_CATEGORIAS;
+    if (error || !data) {
+      console.warn('No se pudieron obtener categorías de Supabase:', error?.message);
+      return [];
     }
-    return data;
-  } catch {
-    return MOCK_CATEGORIAS;
+
+    return data.map((c: any) => ({
+      id: c.id,
+      nombre: c.nombre,
+      slug: c.slug || c.nombre.toLowerCase().replace(/\s+/g, '-'),
+      descripcion: c.descripcion,
+      orden: c.orden ?? 0,
+      icono: c.icono,
+      created_at: c.created_at,
+    }));
+  } catch (err) {
+    console.warn('Error en getCategorias:', err);
+    return [];
   }
 }
 
 /**
- * Servicio para obtener sesiones con su categoría relacionada
+ * Servicio para obtener sesiones reales desde Supabase
  */
 export async function getSesiones(options?: {
   categoriaId?: string;
@@ -32,13 +69,10 @@ export async function getSesiones(options?: {
   duracionMaxMinutos?: number;
 }): Promise<Sesion[]> {
   try {
-    const supabase = createBrowserClient();
-    let query = supabase
-      .from('sesiones')
-      .select('*, categoria:categorias(*)');
+    let query = supabase.from('sesiones').select('*, categoria:categorias(*)');
 
     if (options?.categoriaId) {
-      query = query.eq('id_categoria', options.categoriaId);
+      query = query.or(`categoria_id.eq.${options.categoriaId},id_categoria.eq.${options.categoriaId}`);
     }
     if (options?.destacadas) {
       query = query.eq('destacado', true);
@@ -48,29 +82,22 @@ export async function getSesiones(options?: {
     }
 
     const { data, error } = await query;
-    if (error || !data || data.length === 0) {
-      let filtered = [...MOCK_SESIONES];
-      if (options?.categoriaId) {
-        filtered = filtered.filter((s) => s.id_categoria === options.categoriaId);
-      }
-      if (options?.destacadas) {
-        filtered = filtered.filter((s) => s.destacado);
-      }
-      if (options?.busqueda) {
-        const q = options.busqueda.toLowerCase();
-        filtered = filtered.filter((s) =>
-          s.titulo.toLowerCase().includes(q) || s.descripcion.toLowerCase().includes(q)
-        );
-      }
-      if (options?.duracionMaxMinutos) {
-        filtered = filtered.filter((s) => s.duracion <= options.duracionMaxMinutos! * 60);
-      }
-      return filtered;
+
+    if (error || !data) {
+      console.warn('No se pudieron obtener sesiones de Supabase:', error?.message);
+      return [];
     }
 
-    return data as Sesion[];
-  } catch {
-    return MOCK_SESIONES;
+    let sessions = data.map(normalizeSesion);
+
+    if (options?.duracionMaxMinutos) {
+      sessions = sessions.filter((s) => s.duracion <= options.duracionMaxMinutos! * 60);
+    }
+
+    return sessions;
+  } catch (err) {
+    console.warn('Error en getSesiones:', err);
+    return [];
   }
 }
 
@@ -86,7 +113,6 @@ export async function saveProgreso(
   if (!userId || !sesionId) return;
 
   try {
-    const supabase = createBrowserClient();
     await supabase.from('progreso_favoritos').upsert(
       {
         id_usuario: userId,
@@ -110,11 +136,10 @@ export async function toggleFavorito(
   sesionId: string,
   nuevoEstado: boolean
 ): Promise<boolean> {
-  // Persistir en localStorage para modo simulado / mock
   if (typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem('reprograma_favoritos_ids');
-      let ids: string[] = saved ? JSON.parse(saved) : ['ses-1', 'ses-2'];
+      let ids: string[] = saved ? JSON.parse(saved) : [];
       if (nuevoEstado) {
         if (!ids.includes(sesionId)) ids.push(sesionId);
       } else {
@@ -130,7 +155,6 @@ export async function toggleFavorito(
   if (!userId || !sesionId) return nuevoEstado;
 
   try {
-    const supabase = createBrowserClient();
     const { error } = await supabase.from('progreso_favoritos').upsert(
       {
         id_usuario: userId,
@@ -147,11 +171,11 @@ export async function toggleFavorito(
 }
 
 /**
- * Obtiene la lista de sesiones favoritas
+ * Obtiene la lista de sesiones favoritas del usuario
  */
 export async function getFavoritos(userId?: string): Promise<Sesion[]> {
   try {
-    let favoriteIds: string[] = ['ses-1', 'ses-2'];
+    let favoriteIds: string[] = [];
 
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('reprograma_favoritos_ids');
@@ -162,7 +186,6 @@ export async function getFavoritos(userId?: string): Promise<Sesion[]> {
 
     if (userId) {
       try {
-        const supabase = createBrowserClient();
         const { data } = await supabase
           .from('progreso_favoritos')
           .select('id_sesion')
@@ -173,13 +196,17 @@ export async function getFavoritos(userId?: string): Promise<Sesion[]> {
           favoriteIds = data.map((d: any) => d.id_sesion);
         }
       } catch {
-        // continue with local fallback
+        // continue
       }
+    }
+
+    if (favoriteIds.length === 0) {
+      return [];
     }
 
     const allSessions = await getSesiones();
     return allSessions.filter((s) => favoriteIds.includes(s.id));
   } catch {
-    return MOCK_SESIONES.slice(0, 2);
+    return [];
   }
 }

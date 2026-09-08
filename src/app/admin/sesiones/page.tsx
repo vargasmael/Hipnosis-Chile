@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabaseClient';
+import { normalizeSesion } from '@/lib/services/contentService';
 import {
   Film,
   Plus,
@@ -11,15 +13,15 @@ import {
   Sparkles,
   Clock,
   Search,
-  SlidersHorizontal,
-  X
+  X,
+  Headphones
 } from 'lucide-react';
-import { MOCK_CATEGORIAS, MOCK_SESIONES } from '@/lib/data/mockData';
 import { Sesion, Categoria } from '@/types/database';
 
 export default function AdminSesionesPage() {
-  const [sessions, setSessions] = useState<Sesion[]>(MOCK_SESIONES);
-  const [categories, setCategories] = useState<Categoria[]>(MOCK_CATEGORIAS);
+  const [sessions, setSessions] = useState<Sesion[]>([]);
+  const [categories, setCategories] = useState<Categoria[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
 
@@ -36,36 +38,36 @@ export default function AdminSesionesPage() {
   const [author, setAuthor] = useState('Dra. Valentina Montes');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const savedSessions = localStorage.getItem('reprograma_admin_sesiones');
-        if (savedSessions) setSessions(JSON.parse(savedSessions));
-
-        const savedCats = localStorage.getItem('reprograma_admin_categorias');
-        if (savedCats) {
-          const parsedCats = JSON.parse(savedCats);
-          setCategories(parsedCats);
-          setCategoryId(parsedCats[0]?.id || '');
-        } else {
-          setCategoryId(MOCK_CATEGORIAS[0]?.id || '');
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetching de Categorías
+      const resCat = await supabase.from('categorias').select('*').order('orden', { ascending: true });
+      if (resCat.data) {
+        setCategories(resCat.data);
+        if (resCat.data.length > 0 && !categoryId) {
+          setCategoryId(resCat.data[0].id);
         }
-      } catch {
-        setCategoryId(MOCK_CATEGORIAS[0]?.id || '');
       }
-    }
-  }, []);
 
-  const saveToStorage = (updated: Sesion[]) => {
-    setSessions(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('reprograma_admin_sesiones', JSON.stringify(updated));
-      } catch {
-        // ignore
+      // 2. Fetching real de Sesiones de Supabase: supabase.from('sesiones').select('*')
+      const resSess = await supabase.from('sesiones').select('*, categoria:categorias(*)');
+      if (resSess.data) {
+        setSessions(resSess.data.map(normalizeSesion));
+      } else {
+        setSessions([]);
       }
+    } catch (err) {
+      console.warn('Error fetching sesiones:', err);
+      setSessions([]);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -89,52 +91,84 @@ export default function AdminSesionesPage() {
     }, 600);
   };
 
-  const handleCreateSession = (e: React.FormEvent) => {
+  const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    const cat = categories.find((c) => c.id === categoryId);
-    const newSession: Sesion = {
-      id: `ses-${Date.now()}`,
+    setUploading(true);
+
+    const newRecord = {
       titulo: title,
       descripcion: description,
-      id_categoria: categoryId || categories[0]?.id || 'cat-1',
-      categoria: cat || categories[0],
+      categoria_id: categoryId || (categories[0]?.id ?? null),
       duracion: durationMinutes * 60,
-      url_archivo_multimedia: mediaUrl || 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
-      url_imagen_portada: coverUrl || 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=800&q=80',
-      tipo_multimedia: 'audio',
+      audio_url: mediaUrl || 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
+      imagen_url: coverUrl || 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=800&q=80',
       destacado: isFeatured,
       guia_o_autor: author,
-      veces_reproducida: 0,
-      created_at: new Date().toISOString(),
     };
 
-    const updated = [newSession, ...sessions];
-    saveToStorage(updated);
-    setShowModal(false);
-    showToast('Nueva sesión publicada con éxito');
+    try {
+      // Inserción real en Supabase
+      const { data, error } = await supabase.from('sesiones').insert([newRecord]).select();
 
-    // Reset fields
-    setTitle('');
-    setDescription('');
-    setMediaUrl('');
-    setCoverUrl('');
-    setIsFeatured(false);
+      if (error) {
+        showToast(`Error al guardar en Supabase: ${error.message}`);
+      } else {
+        showToast('Nueva sesión guardada en Supabase');
+        await fetchData();
+        setShowModal(false);
+        // Reset fields
+        setTitle('');
+        setDescription('');
+        setMediaUrl('');
+        setCoverUrl('');
+        setIsFeatured(false);
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Error al conectar con Supabase');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleDeleteSession = (id: string) => {
-    const updated = sessions.filter((s) => s.id !== id);
-    saveToStorage(updated);
-    showToast('Sesión eliminada del catálogo');
+  const handleDeleteSession = async (id: string) => {
+    try {
+      const { error } = await supabase.from('sesiones').delete().eq('id', id);
+      if (error) {
+        showToast(`Error al eliminar: ${error.message}`);
+      } else {
+        setSessions((prev) => prev.filter((s) => s.id !== id));
+        showToast('Sesión eliminada de Supabase');
+      }
+    } catch (err: any) {
+      showToast('Error al procesar eliminación');
+    }
   };
 
-  const handleToggleFeatured = (id: string) => {
-    const updated = sessions.map((s) => (s.id === id ? { ...s, destacado: !s.destacado } : s));
-    saveToStorage(updated);
-    showToast('Estado destacado actualizado');
+  const handleToggleFeatured = async (session: Sesion) => {
+    const nextState = !session.destacado;
+    try {
+      const { error } = await supabase
+        .from('sesiones')
+        .update({ destacado: nextState })
+        .eq('id', session.id);
+
+      if (error) {
+        showToast(`Error al actualizar: ${error.message}`);
+      } else {
+        setSessions((prev) =>
+          prev.map((s) => (s.id === session.id ? { ...s, destacado: nextState } : s))
+        );
+        showToast('Estado destacado actualizado en Supabase');
+      }
+    } catch {
+      showToast('Error al actualizar estado');
+    }
   };
 
   const filteredSessions = sessions.filter((s) => {
-    const matchCategory = selectedCategoryFilter ? s.id_categoria === selectedCategoryFilter : true;
+    const matchCategory = selectedCategoryFilter
+      ? (s.categoria_id === selectedCategoryFilter || s.id_categoria === selectedCategoryFilter)
+      : true;
     const matchSearch = searchQuery
       ? s.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
         s.guia_o_autor.toLowerCase().includes(searchQuery.toLowerCase())
@@ -160,10 +194,10 @@ export default function AdminSesionesPage() {
             <span>Biblioteca de Audios & Frecuencias</span>
           </div>
           <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
-            Gestión de Sesiones
+            Gestión de Sesiones (Supabase)
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Crea, edita y organiza las inducciones guiadas del catálogo de Re-Programa.
+            Crea, edita y organiza las inducciones guiadas consultando directamente la base de datos de Supabase.
           </p>
         </div>
 
@@ -184,7 +218,7 @@ export default function AdminSesionesPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar sesión por título o terapeuta..."
+            placeholder="Buscar sesión por título o autor..."
             className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#1e1716] border border-[#3b2c29] text-xs text-[#ece5e2] placeholder-[#7d6f6b] focus:outline-none focus:border-[#a55850]"
           />
         </div>
@@ -216,76 +250,98 @@ export default function AdminSesionesPage() {
         </div>
       </div>
 
-      {/* Tabla de Sesiones */}
-      <div className="border border-[#3b2c29] rounded-3xl overflow-hidden bg-[#1e1716] shadow-2xl">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#140f0e] text-[#7d6f6b] uppercase text-[10px] tracking-wider border-b border-[#2d2220]">
-              <tr>
-                <th className="py-3.5 px-5">Sesión & Portada</th>
-                <th className="py-3.5 px-4">Categoría</th>
-                <th className="py-3.5 px-4">Duración</th>
-                <th className="py-3.5 px-4">Destacada</th>
-                <th className="py-3.5 px-4 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#2d2220] text-[#c7b9b4]">
-              {filteredSessions.map((session) => (
-                <tr key={session.id} className="hover:bg-[#251d1c]/50 transition-colors">
-                  <td className="py-3.5 px-5 flex items-center gap-3">
-                    <img
-                      src={session.url_imagen_portada || ''}
-                      alt={session.titulo}
-                      className="w-11 h-11 rounded-xl object-cover bg-[#2d2220] shrink-0 border border-[#3b2c29]"
-                    />
-                    <div className="min-w-0 max-w-sm">
-                      <p className="font-medium text-xs text-[#fbf7f4] truncate">
-                        {session.titulo}
-                      </p>
-                      <p className="text-[11px] text-[#7d6f6b] truncate mt-0.5">
-                        {session.guia_o_autor}
-                      </p>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-[#b98d76] font-medium">
-                    {session.categoria?.nombre || 'General'}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5 text-[#a89b97]">
-                      <Clock className="w-3.5 h-3.5 text-[#7d6f6b]" />
-                      <span>{Math.round(session.duracion / 60)} min</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <button
-                      onClick={() => handleToggleFeatured(session.id)}
-                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
-                        session.destacado
-                          ? 'bg-[#a55850]/20 text-[#d8aba1] border border-[#a55850]/40'
-                          : 'bg-[#140f0e] text-[#7d6f6b] hover:text-[#ece5e2] border border-[#2d2220]'
-                      }`}
-                    >
-                      <Star className={`w-3 h-3 ${session.destacado ? 'fill-current' : ''}`} />
-                      <span>{session.destacado ? 'Destacada' : 'Normal'}</span>
-                    </button>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <button
-                      onClick={() => handleDeleteSession(session.id)}
-                      className="p-2 rounded-xl text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] transition-colors"
-                      title="Eliminar sesión"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Tabla de Sesiones o Estado Vacío */}
+      {loading ? (
+        <div className="py-20 text-center text-xs text-[#a89b97] bg-[#1e1716] rounded-3xl border border-[#2d2220] animate-pulse">
+          Consultando sesiones en Supabase...
         </div>
-      </div>
+      ) : filteredSessions.length === 0 ? (
+        <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
+          <Headphones className="w-12 h-12 mx-auto text-[#b98d76] opacity-60" />
+          <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
+            No hay sesiones disponibles aún
+          </h3>
+          <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
+            Aún no se han registrado audios en la tabla `sesiones` de Supabase o no coinciden con tu búsqueda. Haz clic en "Nueva Sesión" para crear la primera.
+          </p>
+          <button
+            onClick={() => setShowModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a55850] text-white text-xs font-medium shadow-md shadow-[#a55850]/20"
+          >
+            <Plus className="w-4 h-4" /> Crear Primera Sesión
+          </button>
+        </div>
+      ) : (
+        <div className="border border-[#3b2c29] rounded-3xl overflow-hidden bg-[#1e1716] shadow-2xl">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#140f0e] text-[#7d6f6b] uppercase text-[10px] tracking-wider border-b border-[#2d2220]">
+                <tr>
+                  <th className="py-3.5 px-5">Sesión & Portada</th>
+                  <th className="py-3.5 px-4">Categoría</th>
+                  <th className="py-3.5 px-4">Duración</th>
+                  <th className="py-3.5 px-4">Destacada</th>
+                  <th className="py-3.5 px-4 text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#2d2220] text-[#c7b9b4]">
+                {filteredSessions.map((session) => (
+                  <tr key={session.id} className="hover:bg-[#251d1c]/50 transition-colors">
+                    <td className="py-3.5 px-5 flex items-center gap-3">
+                      <img
+                        src={session.imagen_url || session.url_imagen_portada || ''}
+                        alt={session.titulo}
+                        className="w-11 h-11 rounded-xl object-cover bg-[#2d2220] shrink-0 border border-[#3b2c29]"
+                      />
+                      <div className="min-w-0 max-w-sm">
+                        <p className="font-medium text-xs text-[#fbf7f4] truncate">
+                          {session.titulo}
+                        </p>
+                        <p className="text-[11px] text-[#7d6f6b] truncate mt-0.5">
+                          {session.guia_o_autor}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#b98d76] font-medium">
+                      {session.categoria?.nombre || 'General'}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5 text-[#a89b97]">
+                        <Clock className="w-3.5 h-3.5 text-[#7d6f6b]" />
+                        <span>{Math.round(session.duracion / 60)} min</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <button
+                        onClick={() => handleToggleFeatured(session)}
+                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-medium transition-colors ${
+                          session.destacado
+                            ? 'bg-[#a55850]/20 text-[#d8aba1] border border-[#a55850]/40'
+                            : 'bg-[#140f0e] text-[#7d6f6b] hover:text-[#ece5e2] border border-[#2d2220]'
+                        }`}
+                      >
+                        <Star className={`w-3 h-3 ${session.destacado ? 'fill-current' : ''}`} />
+                        <span>{session.destacado ? 'Destacada' : 'Normal'}</span>
+                      </button>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => handleDeleteSession(session.id)}
+                        className="p-2 rounded-xl text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] transition-colors"
+                        title="Eliminar sesión de Supabase"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
-      {/* MODAL NUEVA SESIÓN */}
+      {/* MODAL NUEVA SESIÓN CON GUARDADO EN SUPABASE */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
           <div className="w-full max-w-xl my-8 p-6 sm:p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] shadow-2xl space-y-6">
@@ -293,7 +349,7 @@ export default function AdminSesionesPage() {
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#a55850]" />
                 <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
-                  Publicar Nueva Sesión
+                  Publicar Nueva Sesión en Supabase
                 </h3>
               </div>
               <button
@@ -375,10 +431,10 @@ export default function AdminSesionesPage() {
                 />
               </div>
 
-              {/* Subida de Archivos Simulados */}
+              {/* Subida de Archivos */}
               <div className="p-4 rounded-2xl bg-[#140f0e] border border-[#2d2220] space-y-3">
                 <span className="text-[#b98d76] font-medium block flex items-center gap-1.5">
-                  <Upload className="w-4 h-4" /> Archivos Multimedia (Simulación de Carga)
+                  <Upload className="w-4 h-4" /> Archivos Multimedia
                 </span>
 
                 <div className="space-y-1">
@@ -391,7 +447,7 @@ export default function AdminSesionesPage() {
                   />
                   {mediaUrl && (
                     <span className="text-[11px] text-teal-400 block truncate mt-1">
-                      ✓ Archivo cargado correctamente
+                      ✓ Archivo de audio listo para guardar en Supabase
                     </span>
                   )}
                 </div>
@@ -406,7 +462,7 @@ export default function AdminSesionesPage() {
                   />
                   {coverUrl && (
                     <span className="text-[11px] text-teal-400 block truncate mt-1">
-                      ✓ Imagen de portada asignada
+                      ✓ Portada lista para guardar en Supabase
                     </span>
                   )}
                 </div>
@@ -422,7 +478,7 @@ export default function AdminSesionesPage() {
                   className="w-4 h-4 rounded accent-[#a55850] bg-[#140f0e] border-[#2d2220]"
                 />
                 <label htmlFor="isFeatured" className="text-[#ece5e2] font-medium cursor-pointer">
-                  Marcar como sesión destacada (aparecerá en el carrusel principal)
+                  Marcar como sesión destacada en el carrusel de inicio
                 </label>
               </div>
 
@@ -440,7 +496,7 @@ export default function AdminSesionesPage() {
                   disabled={uploading}
                   className="px-6 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-xs shadow-lg shadow-[#a55850]/20 disabled:opacity-50"
                 >
-                  {uploading ? 'Procesando...' : 'Guardar y Publicar'}
+                  {uploading ? 'Guardando en Supabase...' : 'Guardar en Supabase'}
                 </button>
               </div>
             </form>

@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
-import { Sparkles, ArrowRight, Lock, Mail, User, CheckCircle2, AlertCircle, Feather } from 'lucide-react';
+import { ArrowRight, Lock, Mail, User, AlertCircle, Feather } from 'lucide-react';
 
 export default function RegistroPage() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { refreshUser } = useAuth();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,14 +21,35 @@ export default function RegistroPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    const res = await signUp(email, password, nombre);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            nombre_completo: nombre,
+            estado_suscripcion: 'inactiva',
+            rol: 'user',
+          },
+        },
+      });
 
-    if (res.error) {
-      setErrorMsg(res.error);
-    } else {
-      // Redirigir al muro de activación de membresía
+      if (error) {
+        setErrorMsg(error.message);
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        await refreshUser();
+      }
+
+      setLoading(false);
+      // Redirigir exitosamente al usuario a /suscripcion según requerimiento
       router.push('/suscripcion');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Error al procesar el registro con Supabase');
+      setLoading(false);
     }
   };
 

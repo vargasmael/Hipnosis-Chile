@@ -18,7 +18,7 @@ export interface Categoria {
   nombre: string;
   slug: string;
   descripcion?: string | null;
-  orden: number;
+  orden?: number;
   icono?: string | null;
   created_at?: string;
 }
@@ -32,7 +32,11 @@ export interface Sesion {
   duracion: number; // en segundos
   url_archivo_multimedia: string;
   url_imagen_portada?: string | null;
-  tipo_multimedia: TipoMultimedia;
+  // Propiedades canónicas del esquema Supabase Fase 5:
+  categoria_id?: string;
+  audio_url?: string;
+  imagen_url?: string | null;
+  tipo_multimedia?: TipoMultimedia;
   destacado: boolean;
   guia_o_autor: string;
   veces_reproducida?: number;

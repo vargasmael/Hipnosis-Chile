@@ -124,9 +124,9 @@ export function FloatingPlayer() {
               onClick={() => setIsExpanded(true)}
             >
               <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-[#2d2220] shrink-0 shadow-md">
-                {currentSession.url_imagen_portada ? (
+                {(currentSession.imagen_url || currentSession.url_imagen_portada) ? (
                   <img
-                    src={currentSession.url_imagen_portada}
+                    src={currentSession.imagen_url || currentSession.url_imagen_portada || ''}
                     alt={currentSession.titulo}
                     className="w-full h-full object-cover"
                   />
@@ -236,9 +236,9 @@ export function FloatingPlayer() {
               {isPlaying && (
                 <div className="absolute inset-0 bg-[#a55850]/15 rounded-3xl animate-ping opacity-25 pointer-events-none" />
               )}
-              {currentSession.url_imagen_portada ? (
+              {(currentSession.imagen_url || currentSession.url_imagen_portada) ? (
                 <img
-                  src={currentSession.url_imagen_portada}
+                  src={currentSession.imagen_url || currentSession.url_imagen_portada || ''}
                   alt={currentSession.titulo}
                   className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 />

@@ -53,9 +53,9 @@ export function SessionCard({
         className="group flex items-center gap-4 p-3 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700/80 transition-all cursor-pointer shadow-sm"
       >
         <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-800 shrink-0">
-          {session.url_imagen_portada ? (
+          {(session.imagen_url || session.url_imagen_portada) ? (
             <img
-              src={session.url_imagen_portada}
+              src={session.imagen_url || session.url_imagen_portada || ''}
               alt={session.titulo}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
@@ -117,9 +117,9 @@ export function SessionCard({
     >
       {/* Portada */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-[#2d2220]">
-        {session.url_imagen_portada ? (
+        {(session.imagen_url || session.url_imagen_portada) ? (
           <img
-            src={session.url_imagen_portada}
+            src={session.imagen_url || session.url_imagen_portada || ''}
             alt={session.titulo}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />

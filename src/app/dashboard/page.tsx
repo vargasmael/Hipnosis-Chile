@@ -11,10 +11,10 @@ import { ContinueListeningRow } from '@/components/sessions/ContinueListeningRow
 import {
   Sparkles,
   ShieldCheck,
-  User,
   Quote,
   Compass,
-  ArrowRight
+  ArrowRight,
+  Headphones
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -40,7 +40,6 @@ export default function DashboardPage() {
   const userName = user?.nombre_completo || user?.email?.split('@')[0] || 'Viajero';
   const featuredSessions = sessions.filter((s) => s.destacado);
 
-  // Generamos sesiones de "Continuar escuchando" con progresos simulados
   const continueListeningItems = sessions.slice(0, 3).map((session, idx) => ({
     session,
     progressSeconds: [320, 540, 890][idx] || 300,
@@ -109,7 +108,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      {/* 5. Catálogo Completo / Recomendadas */}
+      {/* 5. Catálogo Completo / Consultas reales */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -133,6 +132,16 @@ export default function DashboardPage() {
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="h-64 rounded-3xl bg-[#1e1716] border border-[#2d2220] animate-pulse" />
             ))}
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
+            <Headphones className="w-12 h-12 mx-auto text-[#b98d76] opacity-60" />
+            <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
+              No hay sesiones disponibles aún
+            </h3>
+            <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
+              Pronto se publicarán nuevas inducciones y frecuencias de bienestar. Revisa nuevamente más tarde o visita el panel de administración para agregarlas.
+            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
