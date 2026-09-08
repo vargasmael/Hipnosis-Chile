@@ -34,7 +34,6 @@ export async function middleware(request: NextRequest) {
   }
 
   const authCookie = request.cookies.get('reprograma_auth')?.value;
-  const subCookie = request.cookies.get('reprograma_sub')?.value;
   const roleCookie = request.cookies.get('reprograma_role')?.value;
 
   // 1. Si no hay cookie de sesión autenticada -> Redirigir a /login
@@ -45,26 +44,15 @@ export async function middleware(request: NextRequest) {
   }
 
   const isAdmin = roleCookie === 'admin';
-  const isSubActive = subCookie === 'activa';
 
   // 2. Proteger /admin -> Solo administradores
   if (pathname.startsWith('/admin') && !isAdmin) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 3. Proteger rutas de streaming (/dashboard, /biblioteca, /favoritos, /explorar, /sesion)
-  // Requiere membresía activa
-  if (
-    (pathname.startsWith('/dashboard') ||
-      pathname.startsWith('/biblioteca') ||
-      pathname.startsWith('/favoritos') ||
-      pathname.startsWith('/explorar') ||
-      pathname.startsWith('/sesion')) &&
-    !isSubActive &&
-    !isAdmin
-  ) {
-    return NextResponse.redirect(new URL('/suscripcion', request.url));
-  }
+  // 3. Las rutas privadas (/dashboard, /biblioteca, /favoritos, /sesion) permiten el paso
+  // para que el AuthProvider y los wrappers de cliente lean el estado actualizado en vivo
+  // directamente de Firestore, evitando rebotes en caché o cookies desfasadas.
 
   return NextResponse.next();
 }

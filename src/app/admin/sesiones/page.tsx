@@ -177,7 +177,9 @@ export default function AdminSesionesPage() {
 
       const newRecord = {
         titulo: title.trim(),
+        title: title.trim(),
         descripcion: description.trim(),
+        description: description.trim(),
         categoria_id: categoryId || (categories[0]?.id ?? 'ansiedad-estres'),
         id_categoria: categoryId || (categories[0]?.id ?? 'ansiedad-estres'),
         categoria: selectedCat ? selectedCat : undefined,

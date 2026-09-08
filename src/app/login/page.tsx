@@ -7,6 +7,7 @@ import { auth, db } from '@/lib/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '@/context/AuthContext';
+import { isSubscriptionActive } from '@/types/database';
 import { ArrowRight, Lock, Mail, AlertCircle, Feather } from 'lucide-react';
 
 function LoginForm() {
@@ -35,7 +36,8 @@ function LoginForm() {
       try {
         const docSnap = await getDoc(doc(db, 'usuarios', uid));
         if (docSnap.exists()) {
-          estadoSuscripcion = docSnap.data().estado_suscripcion || 'inactiva';
+          const data = docSnap.data();
+          estadoSuscripcion = data.estado_suscripcion || data.estado || 'inactiva';
         }
       } catch {
         // fallback
@@ -47,7 +49,7 @@ function LoginForm() {
       // 3. Gestión de Sesión: Redirige a /suscripcion si es inactivo, o a /dashboard si es activo
       if (redirectTo) {
         router.push(redirectTo);
-      } else if (estadoSuscripcion === 'activa') {
+      } else if (isSubscriptionActive(estadoSuscripcion)) {
         router.push('/dashboard');
       } else {
         router.push('/suscripcion');

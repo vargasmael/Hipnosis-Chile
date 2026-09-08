@@ -10,7 +10,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { Usuario, EstadoSuscripcion, RolUsuario } from '@/types/database';
+import { Usuario, EstadoSuscripcion, RolUsuario, isSubscriptionActive } from '@/types/database';
 
 interface AuthContextType {
   user: Usuario | null;
@@ -27,8 +27,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function syncUserCookies(u: Usuario | null) {
   if (typeof document === 'undefined') return;
   if (u) {
+    const subStatus = isSubscriptionActive(u.estado_suscripcion) ? 'activa' : (u.estado_suscripcion || 'inactiva');
     document.cookie = `reprograma_auth=true; path=/; max-age=2592000; SameSite=Lax`;
-    document.cookie = `reprograma_sub=${u.estado_suscripcion}; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `reprograma_sub=${subStatus}; path=/; max-age=2592000; SameSite=Lax`;
     document.cookie = `reprograma_role=${u.rol}; path=/; max-age=2592000; SameSite=Lax`;
     document.cookie = `reprograma_user_id=${u.id}; path=/; max-age=2592000; SameSite=Lax`;
   } else {
@@ -50,11 +51,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (docSnap.exists()) {
         const data = docSnap.data();
+        const rawSub = data.estado_suscripcion || data.estado || 'inactiva';
+        const normalizedSub: EstadoSuscripcion = isSubscriptionActive(rawSub) ? 'activa' : 'inactiva';
+
         const u: Usuario = {
           id: uid,
           email: data.email || email,
           nombre_completo: data.nombre_completo || email.split('@')[0],
-          estado_suscripcion: data.estado_suscripcion || 'inactiva',
+          estado_suscripcion: normalizedSub,
           rol: data.rol || 'user',
           id_suscripcion_mercadopago: data.id_suscripcion_mercadopago || null,
           created_at: data.created_at || new Date().toISOString(),

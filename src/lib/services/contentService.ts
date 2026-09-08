@@ -14,25 +14,106 @@ import {
 import { Categoria, Sesion } from '@/types/database';
 
 /**
- * Normaliza un documento proveniente de Firestore
+ * Normaliza un documento proveniente de Firestore con soporte para campos en español e inglés
  */
 export function normalizeFirestoreSesion(id: string, data: any): Sesion {
+  if (!data) {
+    return {
+      id,
+      titulo: 'Sesión sin título',
+      title: 'Sesión sin título',
+      descripcion: '',
+      description: '',
+      id_categoria: '',
+      duracion: 600,
+      url_archivo_multimedia: '',
+      destacado: false,
+      guia_o_autor: 'Especialista Re-Programa',
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  // Soporte universal para variaciones de clave de título en Firestore
+  const rawTitle =
+    data.titulo ??
+    data.title ??
+    data.nombre ??
+    data.name ??
+    data.Titulo ??
+    data.Title ??
+    data.titulo_sesion ??
+    data.nombre_sesion ??
+    '';
+
+  const resolvedTitle = String(rawTitle).trim() || 'Sesión sin título';
+
+  // Log de diagnóstico temporal para depuración en producción
+  console.log(`[contentService] Mapeando sesión ${id}:`, {
+    resolvedTitle,
+    dataKeys: Object.keys(data),
+    dataTitulo: data.titulo,
+    dataTitle: data.title,
+    dataNombre: data.nombre,
+  });
+
+  const rawDesc =
+    data.descripcion ??
+    data.description ??
+    data.desc ??
+    data.Descripcion ??
+    '';
+
+  const audioUrl =
+    data.audio_url ||
+    data.audioUrl ||
+    data.url_archivo_multimedia ||
+    data.media_url ||
+    data.mediaUrl ||
+    data.url ||
+    '';
+
+  const imageUrl =
+    data.imagen_url ||
+    data.imagenUrl ||
+    data.url_imagen_portada ||
+    data.cover_url ||
+    data.coverUrl ||
+    data.imageUrl ||
+    null;
+
+  const rawDuration =
+    Number(data.duracion) ||
+    Number(data.duration) ||
+    Number(data.duracion_segundos) ||
+    600;
+
+  const author =
+    data.guia_o_autor ||
+    data.autor ||
+    data.author ||
+    data.guia ||
+    'Especialista Re-Programa';
+
+  const catId = data.categoria_id || data.id_categoria || data.categoryId || '';
+
   return {
     id,
-    titulo: data.titulo || 'Sesión sin título',
-    descripcion: data.descripcion || '',
-    id_categoria: data.categoria_id || data.id_categoria || '',
-    categoria_id: data.categoria_id || data.id_categoria || '',
+    titulo: resolvedTitle,
+    title: resolvedTitle,
+    descripcion: String(rawDesc),
+    description: String(rawDesc),
+    id_categoria: catId,
+    categoria_id: catId,
     categoria: data.categoria || undefined,
-    duracion: Number(data.duracion) || 600,
-    audio_url: data.audio_url || data.url_archivo_multimedia || '',
-    imagen_url: data.imagen_url || data.url_imagen_portada || null,
-    url_archivo_multimedia: data.audio_url || data.url_archivo_multimedia || '',
-    url_imagen_portada: data.imagen_url || data.url_imagen_portada || null,
+    duracion: rawDuration,
+    audio_url: audioUrl,
+    imagen_url: imageUrl,
+    url_archivo_multimedia: audioUrl,
+    url_imagen_portada: imageUrl,
     tipo_multimedia: data.tipo_multimedia || 'audio',
-    destacado: Boolean(data.destacado),
-    guia_o_autor: data.guia_o_autor || 'Especialista Re-Programa',
-    veces_reproducida: Number(data.veces_reproducida) || 0,
+    destacado: Boolean(data.destacado || data.featured),
+    guia_o_autor: author,
+    veces_reproducida: Number(data.veces_reproducida || data.plays) || 0,
     tags: data.tags || [],
     created_at: data.created_at || new Date().toISOString(),
     updated_at: data.updated_at,

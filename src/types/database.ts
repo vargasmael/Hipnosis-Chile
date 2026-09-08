@@ -1,6 +1,15 @@
-export type EstadoSuscripcion = 'activa' | 'inactiva' | 'pendiente' | 'cancelada';
+export type EstadoSuscripcion = 'activa' | 'inactiva' | 'pendiente' | 'cancelada' | 'activo';
 export type RolUsuario = 'user' | 'admin';
 export type TipoMultimedia = 'audio' | 'video';
+
+/**
+ * Validador unificado de estado de suscripción que acepta 'activa', 'activo' o 'active'
+ */
+export function isSubscriptionActive(estado?: string | null): boolean {
+  if (!estado) return false;
+  const s = String(estado).toLowerCase().trim();
+  return s === 'activa' || s === 'activo' || s === 'active';
+}
 
 export interface Usuario {
   id: string;
@@ -26,13 +35,15 @@ export interface Categoria {
 export interface Sesion {
   id: string;
   titulo: string;
+  title?: string; // Compatibilidad con campos en inglés
   descripcion: string;
+  description?: string; // Compatibilidad con campos en inglés
   id_categoria: string;
   categoria?: Categoria;
   duracion: number; // en segundos
   url_archivo_multimedia: string;
   url_imagen_portada?: string | null;
-  // Propiedades canónicas del esquema Supabase Fase 5:
+  // Propiedades canónicas del esquema Supabase/Firestore:
   categoria_id?: string;
   audio_url?: string;
   imagen_url?: string | null;

@@ -30,6 +30,20 @@ export function SessionCard({
   const isCurrentPlaying = isCurrent && isPlaying;
   const durationMinutes = Math.round(session.duracion / 60);
 
+  // Unificación de títulos con compatibilidad para campos en español e inglés
+  const sessionTitle = session.titulo || (session as any).title || (session as any).nombre || 'Sesión sin título';
+  const sessionDescription = session.descripcion || (session as any).description || '';
+
+  // Log temporal para verificar en consola de navegador la coincidencia de campos de Firestore
+  if (typeof window !== 'undefined') {
+    console.log('[SessionCard] Mapeo de título:', {
+      id: session.id,
+      titulo: session.titulo,
+      title: (session as any).title,
+      resolved: sessionTitle,
+    });
+  }
+
   const handleCardClick = () => {
     router.push(`/sesion/${session.id}`);
   };
@@ -83,7 +97,7 @@ export function SessionCard({
             </span>
           </div>
           <h4 className="text-sm font-semibold text-white truncate group-hover:text-indigo-300 transition-colors">
-            {session.titulo}
+            {sessionTitle}
           </h4>
           <p className="text-xs text-slate-400 truncate mt-0.5">
             {session.guia_o_autor}
@@ -171,10 +185,10 @@ export function SessionCard({
             </span>
           </div>
           <h3 className="font-serif-persona text-lg font-normal text-[#fbf7f4] group-hover:text-[#d8aba1] transition-colors line-clamp-1">
-            {session.titulo}
+            {sessionTitle}
           </h3>
           <p className="text-xs text-[#9c8e8a] mt-1.5 line-clamp-2 font-light leading-relaxed">
-            {session.descripcion}
+            {sessionDescription}
           </p>
         </div>
 
