@@ -223,8 +223,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshUser = async () => {
-    if (auth.currentUser) {
-      await fetchUserProfile(auth.currentUser.uid, auth.currentUser.email || '');
+    try {
+      if (auth.currentUser) {
+        await fetchUserProfile(auth.currentUser.uid, auth.currentUser.email || '');
+      } else if (user?.id) {
+        await fetchUserProfile(user.id, user.email || '');
+      }
+    } catch (err) {
+      console.warn('Error al refrescar usuario desde Firestore:', err);
     }
   };
 

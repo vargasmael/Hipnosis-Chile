@@ -19,14 +19,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Rutas que requieren protección: /dashboard, /biblioteca, /favoritos, /admin, /perfil, /explorar
+  // Rutas que requieren protección: /dashboard, /biblioteca, /favoritos, /admin, /perfil, /explorar, /sesion
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/biblioteca') ||
     pathname.startsWith('/favoritos') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/perfil') ||
-    pathname.startsWith('/explorar');
+    pathname.startsWith('/explorar') ||
+    pathname.startsWith('/sesion');
 
   if (!isProtectedRoute) {
     return NextResponse.next();
@@ -51,13 +52,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
-  // 3. Proteger rutas de streaming (/dashboard, /biblioteca, /favoritos, /explorar)
+  // 3. Proteger rutas de streaming (/dashboard, /biblioteca, /favoritos, /explorar, /sesion)
   // Requiere membresía activa
   if (
     (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/biblioteca') ||
       pathname.startsWith('/favoritos') ||
-      pathname.startsWith('/explorar')) &&
+      pathname.startsWith('/explorar') ||
+      pathname.startsWith('/sesion')) &&
     !isSubActive &&
     !isAdmin
   ) {

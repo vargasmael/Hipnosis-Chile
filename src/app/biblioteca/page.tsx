@@ -23,14 +23,21 @@ export default function BibliotecaPage() {
 
   useEffect(() => {
     async function loadData() {
-      setLoadingData(true);
-      const [cats, sess] = await Promise.all([
-        getCategorias(),
-        getSesiones(),
-      ]);
-      setCategories(cats);
-      setSessions(sess);
-      setLoadingData(false);
+      try {
+        setLoadingData(true);
+        const [cats, sess] = await Promise.all([
+          getCategorias(),
+          getSesiones(),
+        ]);
+        setCategories(cats);
+        setSessions(sess);
+      } catch (err) {
+        console.warn('Error cargando biblioteca en Firestore:', err);
+        setCategories([]);
+        setSessions([]);
+      } finally {
+        setLoadingData(false);
+      }
     }
     loadData();
   }, []);

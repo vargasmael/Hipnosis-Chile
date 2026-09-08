@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sesion } from '@/types/database';
 import { usePlayer } from '@/context/PlayerContext';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +21,7 @@ export function SessionCard({
   progressSeconds = 0,
   isInitiallyFavorited = false,
 }: SessionCardProps) {
+  const router = useRouter();
   const { currentSession, isPlaying, playSession, togglePlay } = usePlayer();
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(isInitiallyFavorited);
@@ -28,13 +30,13 @@ export function SessionCard({
   const isCurrentPlaying = isCurrent && isPlaying;
   const durationMinutes = Math.round(session.duracion / 60);
 
+  const handleCardClick = () => {
+    router.push(`/sesion/${session.id}`);
+  };
+
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isCurrent) {
-      togglePlay();
-    } else {
-      playSession(session, progressSeconds);
-    }
+    router.push(`/sesion/${session.id}`);
   };
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {

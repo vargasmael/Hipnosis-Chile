@@ -15,11 +15,18 @@ export default function ExplorarPage() {
 
   useEffect(() => {
     async function load() {
-      setLoading(true);
-      const [cats, sess] = await Promise.all([getCategorias(), getSesiones()]);
-      setCategories(cats);
-      setSessions(sess);
-      setLoading(false);
+      try {
+        setLoading(true);
+        const [cats, sess] = await Promise.all([getCategorias(), getSesiones()]);
+        setCategories(cats);
+        setSessions(sess);
+      } catch (err) {
+        console.warn('Error cargando sesiones en Explorar:', err);
+        setCategories([]);
+        setSessions([]);
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
@@ -129,6 +136,16 @@ export default function ExplorarPage() {
           {filteredSessions.map((session) => (
             <SessionCard key={session.id} session={session} />
           ))}
+        </div>
+      ) : sessions.length === 0 ? (
+        <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
+          <Sparkles className="w-12 h-12 mx-auto text-[#b98d76] opacity-60" />
+          <h3 className="font-serif-persona text-xl sm:text-2xl text-[#fbf7f4]">
+            Aún no hay sesiones publicadas. Vuelve pronto.
+          </h3>
+          <p className="text-xs sm:text-sm text-[#a89b97] max-w-md mx-auto font-light leading-relaxed">
+            Estamos preparando nuevas frecuencias binaurales e inducciones terapéuticas para ti. Muy pronto estarán disponibles en este catálogo.
+          </p>
         </div>
       ) : (
         <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">

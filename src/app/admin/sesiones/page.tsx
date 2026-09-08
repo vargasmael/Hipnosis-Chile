@@ -40,42 +40,92 @@ export default function AdminSesionesPage() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(15);
-  const [mediaUrl, setMediaUrl] = useState('');
-  const [coverUrl, setCoverUrl] = useState('');
+  const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isFeatured, setIsFeatured] = useState(false);
   const [author, setAuthor] = useState('Dra. Valentina Montes');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
+  // 2. Función de subida a Cloudinary
+  const uploadToCloudinary = async (file: File): Promise<string> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || !uploadPreset) {
+      throw new Error('Configuración de Cloudinary incompleta (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME o NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData?.error?.message || 'Error al subir archivo a Cloudinary');
+    }
+
+    const data = await response.json();
+    if (!data.secure_url) {
+      throw new Error('Cloudinary no devolvió la propiedad secure_url');
+    }
+
+    return data.secure_url;
+  };
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetching de Categorías de Firestore
-      const catSnap = await getDocs(collection(db, 'categorias'));
-      const catList: Categoria[] = [];
-      catSnap.forEach((d) => {
-        const data = d.data();
-        catList.push({
-          id: d.id,
-          nombre: data.nombre || '',
-          slug: data.slug || data.nombre?.toLowerCase().replace(/\s+/g, '-') || d.id,
-          descripcion: data.descripcion || '',
-          orden: Number(data.orden) || 0,
+      // 1. Fetching de Categorías de Firestore con try/catch
+      let catList: Categoria[] = [];
+      try {
+        const catSnap = await getDocs(collection(db, 'categorias'));
+        catSnap.forEach((d) => {
+          const data = d.data();
+          catList.push({
+            id: d.id,
+            nombre: data.nombre || '',
+            slug: data.slug || data.nombre?.toLowerCase().replace(/\s+/g, '-') || d.id,
+            descripcion: data.descripcion || '',
+            orden: Number(data.orden) || 0,
+          });
         });
-      });
+      } catch (catErr) {
+        console.warn('Error fetching categorias en Firestore:', catErr);
+      }
+
+      // Si aún no hay categorías creadas en Firestore, proveer categorías estándar
+      if (catList.length === 0) {
+        catList = [
+          { id: 'ansiedad-estres', nombre: 'Alivio de Ansiedad y Estrés', slug: 'ansiedad-estres', orden: 1 },
+          { id: 'sueno-profundo', nombre: 'Sueño Profundo e Insomnio', slug: 'sueno-profundo', orden: 2 },
+          { id: 'autoestima-confianza', nombre: 'Autoestima y Confianza', slug: 'autoestima-confianza', orden: 3 },
+          { id: 'desbloqueo-emocional', nombre: 'Desbloqueo Emocional', slug: 'desbloqueo-emocional', orden: 4 },
+          { id: 'sanacion-interior', nombre: 'Sanación Interior', slug: 'sanacion-interior', orden: 5 },
+        ];
+      }
+
       catList.sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
       setCategories(catList);
-      if (catList.length > 0 && !categoryId) {
+      if (!categoryId && catList.length > 0) {
         setCategoryId(catList[0].id);
       }
 
-      // 2. Fetching real de Sesiones de Firestore: collection(db, 'sesiones')
+      // 2. Fetching real de Sesiones de Firestore: collection(db, 'sesiones') con try/catch
       const sessSnap = await getDocs(collection(db, 'sesiones'));
       const sessList: Sesion[] = [];
       sessSnap.forEach((d) => {
         sessList.push(normalizeFirestoreSesion(d.id, d.data()));
       });
 
-      // Asignar objeto categoria si existe
+      // Asignar objeto categoría si existe
       sessList.forEach((s) => {
         if (!s.categoria && s.categoria_id) {
           s.categoria = catList.find((c) => c.id === s.categoria_id);
@@ -86,6 +136,7 @@ export default function AdminSesionesPage() {
     } catch (err) {
       console.warn('Error fetching sesiones de Firestore:', err);
       setSessions([]);
+      showToast('Nota: No se encontraron sesiones o la base de datos está vacía.');
     } finally {
       setLoading(false);
     }
@@ -100,52 +151,53 @@ export default function AdminSesionesPage() {
     setTimeout(() => setToastMsg(null), 3000);
   };
 
-  const handleSimulatedFileUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'media' | 'cover') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setTimeout(() => {
-      if (type === 'media') {
-        setMediaUrl('https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3');
-        showToast('Audio subido exitosamente (Simulado / R2)');
-      } else {
-        setCoverUrl('https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=800&q=80');
-        showToast('Portada subida exitosamente (Simulada / R2)');
-      }
-      setUploading(false);
-    }, 600);
-  };
-
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Validar que ambos archivos estén seleccionados
+    if (!coverImageFile) {
+      showToast('Por favor selecciona una imagen de portada');
+      return;
+    }
+    if (!audioFile) {
+      showToast('Por favor selecciona un archivo de audio');
+      return;
+    }
+
     setUploading(true);
 
-    const selectedCat = categories.find((c) => c.id === categoryId);
-
-    const newRecord = {
-      titulo: title,
-      descripcion: description,
-      categoria_id: categoryId || (categories[0]?.id ?? ''),
-      id_categoria: categoryId || (categories[0]?.id ?? ''),
-      categoria: selectedCat ? selectedCat : undefined,
-      duracion: durationMinutes * 60,
-      audio_url: mediaUrl || 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
-      url_archivo_multimedia: mediaUrl || 'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3',
-      imagen_url: coverUrl || 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=800&q=80',
-      url_imagen_portada: coverUrl || 'https://images.unsplash.com/photo-1511295742362-92c96b124e52?auto=format&fit=crop&w=800&q=80',
-      destacado: isFeatured,
-      guia_o_autor: author,
-      tipo_multimedia: 'audio' as const,
-      veces_reproducida: 0,
-      created_at: new Date().toISOString(),
-    };
-
     try {
-      // Inserción real en Firestore usando addDoc
+      // 2. Sube primero la imagen a Cloudinary y obtén su URL
+      const imageUrl = await uploadToCloudinary(coverImageFile);
+
+      // 3. Sube luego el audio a Cloudinary y obtén su URL
+      const audioUrl = await uploadToCloudinary(audioFile);
+
+      const selectedCat = categories.find((c) => c.id === categoryId);
+
+      const newRecord = {
+        titulo: title.trim(),
+        descripcion: description.trim(),
+        categoria_id: categoryId || (categories[0]?.id ?? 'ansiedad-estres'),
+        id_categoria: categoryId || (categories[0]?.id ?? 'ansiedad-estres'),
+        categoria: selectedCat ? selectedCat : undefined,
+        duracion: Number(durationMinutes) * 60,
+        audio_url: audioUrl,
+        url_archivo_multimedia: audioUrl,
+        imagen_url: imageUrl,
+        url_imagen_portada: imageUrl,
+        destacado: Boolean(isFeatured),
+        guia_o_autor: author.trim() || 'Dra. Valentina Montes',
+        tipo_multimedia: 'audio' as const,
+        veces_reproducida: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // 4. Solo cuando ambas subidas terminen, ejecuta addDoc en Firestore guardando esas URLs reales
       const docRef = await addDoc(collection(db, 'sesiones'), newRecord);
 
-      showToast('Nueva sesión guardada en Firestore');
+      showToast('Nueva sesión y archivos subidos con éxito');
       const createdSession: Sesion = {
         ...newRecord,
         id: docRef.id,
@@ -156,11 +208,12 @@ export default function AdminSesionesPage() {
       // Reset fields
       setTitle('');
       setDescription('');
-      setMediaUrl('');
-      setCoverUrl('');
+      setCoverImageFile(null);
+      setAudioFile(null);
       setIsFeatured(false);
     } catch (err: any) {
-      showToast(err?.message || 'Error al guardar en Firestore');
+      console.error('Error al subir archivos o crear sesión:', err);
+      showToast(err?.message || 'Error al procesar la subida a Cloudinary');
     } finally {
       setUploading(false);
     }
@@ -455,38 +508,52 @@ export default function AdminSesionesPage() {
                 />
               </div>
 
-              {/* Subida de Archivos */}
-              <div className="p-4 rounded-2xl bg-[#140f0e] border border-[#2d2220] space-y-3">
-                <span className="text-[#b98d76] font-medium block flex items-center gap-1.5">
-                  <Upload className="w-4 h-4" /> Archivos Multimedia
+              {/* Inputs de Archivo Cloudinary (accept image/* y audio/*) */}
+              <div className="p-4 rounded-2xl bg-[#140f0e] border border-[#2d2220] space-y-4">
+                <span className="text-[#b98d76] font-medium block flex items-center gap-1.5 text-xs">
+                  <Upload className="w-4 h-4 text-[#a55850]" /> Archivos Multimedia (Cloudinary CDN)
                 </span>
 
-                <div className="space-y-1">
-                  <label className="text-[#7d6f6b] block">Subir Archivo de Audio (MP3 / WAV):</label>
+                <div className="space-y-1.5">
+                  <label className="text-[#a89b97] block font-medium">
+                    Imagen de Portada *
+                  </label>
                   <input
                     type="file"
-                    accept="audio/*"
-                    onChange={(e) => handleSimulatedFileUpload(e, 'media')}
-                    className="w-full text-xs text-[#a89b97] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#a55850] file:text-white hover:file:bg-[#b8665d] cursor-pointer"
+                    accept="image/*"
+                    required
+                    onChange={(e) => setCoverImageFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-[#a89b97] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#2d2220] file:text-[#fbf7f4] hover:file:bg-[#3b2c29] cursor-pointer"
                   />
-                  {mediaUrl && (
-                    <span className="text-[11px] text-teal-400 block truncate mt-1">
-                      ✓ Archivo de audio listo para Firestore
+                  {coverImageFile ? (
+                    <span className="text-[11px] text-teal-400 block truncate">
+                      ✓ Imagen seleccionada: {coverImageFile.name} ({(coverImageFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#7d6f6b] block">
+                      Selecciona una imagen (JPG, PNG, WebP) para la portada de la sesión.
                     </span>
                   )}
                 </div>
 
-                <div className="space-y-1 pt-2 border-t border-[#2d2220]">
-                  <label className="text-[#7d6f6b] block">Subir Imagen de Portada:</label>
+                <div className="space-y-1.5 pt-2 border-t border-[#2d2220]">
+                  <label className="text-[#a89b97] block font-medium">
+                    Archivo de Audio (MP3 / WAV) *
+                  </label>
                   <input
                     type="file"
-                    accept="image/*"
-                    onChange={(e) => handleSimulatedFileUpload(e, 'cover')}
-                    className="w-full text-xs text-[#a89b97] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#a55850] file:text-white hover:file:bg-[#b8665d] cursor-pointer"
+                    accept="audio/*"
+                    required
+                    onChange={(e) => setAudioFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-[#a89b97] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#2d2220] file:text-[#fbf7f4] hover:file:bg-[#3b2c29] cursor-pointer"
                   />
-                  {coverUrl && (
-                    <span className="text-[11px] text-teal-400 block truncate mt-1">
-                      ✓ Portada lista para Firestore
+                  {audioFile ? (
+                    <span className="text-[11px] text-teal-400 block truncate">
+                      ✓ Audio seleccionado: {audioFile.name} ({(audioFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#7d6f6b] block">
+                      Selecciona el archivo de relajación o hipnosis guiada.
                     </span>
                   )}
                 </div>
@@ -510,17 +577,29 @@ export default function AdminSesionesPage() {
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2d2220]">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2.5 rounded-full bg-[#140f0e] text-[#a89b97] hover:text-[#ece5e2] border border-[#2d2220]"
+                  disabled={uploading}
+                  onClick={() => {
+                    setShowModal(false);
+                    setCoverImageFile(null);
+                    setAudioFile(null);
+                  }}
+                  className="px-4 py-2.5 rounded-full bg-[#140f0e] text-[#a89b97] hover:text-[#ece5e2] border border-[#2d2220] disabled:opacity-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={uploading}
-                  className="px-6 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-xs shadow-lg shadow-[#a55850]/20 disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-xs shadow-lg shadow-[#a55850]/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
                 >
-                  {uploading ? 'Guardando en Firestore...' : 'Guardar en Firestore'}
+                  {uploading ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                      <span>Subiendo archivos y encriptando... por favor espera</span>
+                    </>
+                  ) : (
+                    'Guardar en Firestore'
+                  )}
                 </button>
               </div>
             </form>

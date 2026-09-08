@@ -26,7 +26,10 @@ function formatSeconds(secs: number): string {
   return `${mins.toString().padStart(2, '0')}:${rem.toString().padStart(2, '0')}`;
 }
 
+import { usePathname } from 'next/navigation';
+
 export function FloatingPlayer() {
+  const pathname = usePathname();
   const {
     currentSession,
     isPlaying,
@@ -66,7 +69,7 @@ export function FloatingPlayer() {
     }
   }, [currentSession]);
 
-  if (!currentSession) return null;
+  if (!currentSession || pathname?.startsWith('/sesion')) return null;
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
   const isVideo = currentSession.tipo_multimedia === 'video';

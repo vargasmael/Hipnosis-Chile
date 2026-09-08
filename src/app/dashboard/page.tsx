@@ -24,14 +24,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadData() {
-      setLoadingData(true);
-      const [cats, sess] = await Promise.all([
-        getCategorias(),
-        getSesiones(),
-      ]);
-      setCategories(cats);
-      setSessions(sess);
-      setLoadingData(false);
+      try {
+        setLoadingData(true);
+        const [cats, sess] = await Promise.all([
+          getCategorias(),
+          getSesiones(),
+        ]);
+        setCategories(cats);
+        setSessions(sess);
+      } catch (err) {
+        console.warn('Error al cargar datos en Dashboard de Firestore:', err);
+        setCategories([]);
+        setSessions([]);
+      } finally {
+        setLoadingData(false);
+      }
     }
     loadData();
   }, []);
@@ -135,11 +142,11 @@ export default function DashboardPage() {
         ) : sessions.length === 0 ? (
           <div className="py-20 text-center rounded-3xl bg-[#1e1716] border border-[#2d2220] p-8 space-y-3">
             <Headphones className="w-12 h-12 mx-auto text-[#b98d76] opacity-60" />
-            <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
-              No hay sesiones disponibles aún
+            <h3 className="font-serif-persona text-xl sm:text-2xl text-[#fbf7f4]">
+              Aún no hay sesiones publicadas. Vuelve pronto.
             </h3>
-            <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
-              Pronto se publicarán nuevas inducciones y frecuencias de bienestar en Firestore. Revisa nuevamente más tarde o visita el panel de administración para agregarlas.
+            <p className="text-xs sm:text-sm text-[#a89b97] max-w-md mx-auto font-light leading-relaxed">
+              Estamos preparando nuevas frecuencias binaurales e inducciones terapéuticas para ti. Muy pronto estarán disponibles en este espacio.
             </p>
           </div>
         ) : (
