@@ -3,7 +3,7 @@
 import React from 'react';
 import { Play, Sparkles, ShieldCheck } from 'lucide-react';
 
-export const DEFAULT_WELCOME_YOUTUBE_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+export const DEFAULT_WELCOME_YOUTUBE_URL = 'https://youtu.be/cYOxbEi4QFw';
 
 /**
  * Convierte URLs estándar de YouTube, youtu.be, shorts o embeds a formato /embed/{id}

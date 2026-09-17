@@ -158,6 +158,7 @@ export default function SuscripcionPage() {
       {/* 2. Video de Presentación Pre-Suscripción (VSL) */}
       <div className="w-full max-w-2xl mb-10">
         <VSLPlayer
+          videoUrl="https://youtu.be/cYOxbEi4QFw"
           badgeText="Carta de Presentación del Especialista"
           title="Escucha esto antes de tomar una decisión"
           subtitle="Una breve introducción al método de hipnosis y reprogramación subconsciente que experimentarás dentro del refugio."
