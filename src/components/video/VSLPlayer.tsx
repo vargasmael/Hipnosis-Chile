@@ -3,6 +3,7 @@
 import React from 'react';
 import { Play, Sparkles, ShieldCheck } from 'lucide-react';
 
+export const DEFAULT_WELCOME_VIDEO_URL = '/presentacion.mp4';
 export const DEFAULT_WELCOME_YOUTUBE_URL = 'https://youtu.be/cYOxbEi4QFw';
 
 /**
@@ -58,10 +59,20 @@ export function VSLPlayer({
 }: VSLPlayerProps) {
   const rawUrl =
     videoUrl ||
+    process.env.NEXT_PUBLIC_WELCOME_VIDEO_URL ||
     process.env.NEXT_PUBLIC_WELCOME_YOUTUBE_URL ||
-    DEFAULT_WELCOME_YOUTUBE_URL;
+    DEFAULT_WELCOME_VIDEO_URL;
 
-  const embedUrl = getYouTubeEmbedUrl(rawUrl);
+  const isDirectVideo =
+    rawUrl.endsWith('.mp4') ||
+    rawUrl.endsWith('.webm') ||
+    rawUrl.endsWith('.mov') ||
+    rawUrl.startsWith('/') ||
+    rawUrl.includes('/videos/') ||
+    rawUrl.includes('cloudinary.com') ||
+    rawUrl.includes('firebasestorage.googleapis.com');
+
+  const embedUrl = isDirectVideo ? '' : getYouTubeEmbedUrl(rawUrl);
 
   return (
     <div className={`w-full max-w-2xl mx-auto space-y-4 ${className}`}>
@@ -87,15 +98,28 @@ export function VSLPlayer({
       <div className="relative rounded-3xl p-1.5 sm:p-2 bg-gradient-to-b from-[#a55850]/40 via-[#2d2220] to-[#1e1716] border border-[#a55850]/40 shadow-2xl shadow-black/60 group">
         <div className="absolute -inset-1 bg-[#a55850]/20 rounded-3xl blur-xl pointer-events-none -z-10 group-hover:bg-[#a55850]/30 transition-all duration-500" />
 
-        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-inner">
-          <iframe
-            src={embedUrl}
-            title="Video de Presentación Re-Programa"
-            className="w-full h-full border-0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            loading="lazy"
-          />
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-black shadow-inner flex items-center justify-center">
+          {isDirectVideo ? (
+            <video
+              src={rawUrl}
+              controls
+              playsInline
+              preload="metadata"
+              className="w-full h-full object-cover rounded-2xl"
+              controlsList="nodownload"
+            >
+              Tu navegador no soporta la reproducción de este video.
+            </video>
+          ) : (
+            <iframe
+              src={embedUrl}
+              title="Video de Presentación Re-Programa"
+              className="w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+            />
+          )}
         </div>
 
         <div className="pt-2.5 pb-1 px-3 flex items-center justify-between text-[11px] text-[#a89b97]">

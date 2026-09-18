@@ -362,7 +362,7 @@ export default function LandingPage() {
           {/* Video de Presentación Pre-Suscripción (VSL) */}
           <div className="mt-12 mb-6">
             <VSLPlayer
-              videoUrl="https://youtu.be/cYOxbEi4QFw"
+              videoUrl="/presentacion.mp4"
               badgeText="Presentación Oficial Re-Programa"
               title="Descubre el Método Re-Programa"
               subtitle="Una introducción profunda al método de hipnosis clínica y reprogramación subconsciente que experimentarás dentro del refugio."
