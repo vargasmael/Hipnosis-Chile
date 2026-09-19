@@ -24,18 +24,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export function isMasterAdminEmail(email?: string | null): boolean {
+  if (!email) return false;
+  const clean = email.toLowerCase().trim();
+  return clean === 'vargasmael@gmail.com' || clean === 'admin@re-programa.cl';
+}
+
 function syncUserCookies(u: Usuario | null) {
   if (typeof document === 'undefined') return;
   if (u) {
-    const subStatus = isSubscriptionActive(u.estado_suscripcion) ? 'activa' : (u.estado_suscripcion || 'inactiva');
+    const isOwner = isMasterAdminEmail(u.email);
+    const effectiveRole = isOwner ? 'admin' : (u.rol || 'user');
+    const subStatus = isOwner ? 'activa' : (isSubscriptionActive(u.estado_suscripcion) ? 'activa' : (u.estado_suscripcion || 'inactiva'));
     document.cookie = `reprograma_auth=true; path=/; max-age=2592000; SameSite=Lax`;
     document.cookie = `reprograma_sub=${subStatus}; path=/; max-age=2592000; SameSite=Lax`;
-    document.cookie = `reprograma_role=${u.rol}; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `reprograma_role=${effectiveRole}; path=/; max-age=2592000; SameSite=Lax`;
+    document.cookie = `reprograma_email=${encodeURIComponent(u.email || '')}; path=/; max-age=2592000; SameSite=Lax`;
     document.cookie = `reprograma_user_id=${u.id}; path=/; max-age=2592000; SameSite=Lax`;
   } else {
     document.cookie = `reprograma_auth=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     document.cookie = `reprograma_sub=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     document.cookie = `reprograma_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+    document.cookie = `reprograma_email=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
     document.cookie = `reprograma_user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
   }
 }
@@ -48,18 +58,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userDocRef = doc(db, 'usuarios', uid);
       const docSnap = await getDoc(userDocRef);
+      const isOwner = isMasterAdminEmail(email);
 
       if (docSnap.exists()) {
         const data = docSnap.data();
         const rawSub = data.estado_suscripcion || data.estado || 'inactiva';
         const normalizedSub: EstadoSuscripcion = isSubscriptionActive(rawSub) ? 'activa' : 'inactiva';
 
+        const effectiveRole: RolUsuario = isOwner ? 'admin' : (data.rol || 'user');
+        const effectiveSub: EstadoSuscripcion = isOwner ? 'activa' : normalizedSub;
+
+        // Si es el dueño y en Firestore no figuraba como admin, persistirlo automáticamente
+        if (isOwner && (data.rol !== 'admin' || data.estado_suscripcion !== 'activa')) {
+          await setDoc(userDocRef, { rol: 'admin', estado_suscripcion: 'activa' }, { merge: true });
+        }
+
         const u: Usuario = {
           id: uid,
           email: data.email || email,
           nombre_completo: data.nombre_completo || email.split('@')[0],
-          estado_suscripcion: normalizedSub,
-          rol: data.rol || 'user',
+          estado_suscripcion: effectiveSub,
+          rol: effectiveRole,
           id_suscripcion_mercadopago: data.id_suscripcion_mercadopago || null,
           created_at: data.created_at || new Date().toISOString(),
           updated_at: data.updated_at || new Date().toISOString(),
@@ -68,13 +87,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         syncUserCookies(u);
         return u;
       } else {
-        // Si el documento en Firestore aún no existe, crearlo
+        // Si el documento en Firestore aún no existe, crearlo con permisos de admin si es vargasmael@gmail.com
         const newUserData: Usuario = {
           id: uid,
           email,
           nombre_completo: email.split('@')[0],
-          estado_suscripcion: 'inactiva',
-          rol: 'user',
+          estado_suscripcion: isOwner ? 'activa' : 'inactiva',
+          rol: isOwner ? 'admin' : 'user',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -85,12 +104,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.warn('Error al obtener perfil en Firestore:', err);
+      const isOwner = isMasterAdminEmail(email);
       const fallbackUser: Usuario = {
         id: uid,
         email,
         nombre_completo: email.split('@')[0],
-        estado_suscripcion: 'inactiva',
-        rol: 'user',
+        estado_suscripcion: isOwner ? 'activa' : 'inactiva',
+        rol: isOwner ? 'admin' : 'user',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -101,14 +121,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Revisar si hay un usuario demo guardado
+    // Si había un demo anterior que afectaba el rol de vargasmael@gmail.com, limpiarlo
     const savedDemo = typeof window !== 'undefined' ? localStorage.getItem('hipnosis_demo_user') : null;
     if (savedDemo) {
       try {
         const parsed = JSON.parse(savedDemo);
+        if (isMasterAdminEmail(parsed.email)) {
+          parsed.rol = 'admin';
+          parsed.estado_suscripcion = 'activa';
+          localStorage.removeItem('hipnosis_demo_user');
+        }
         setUser(parsed);
-        setIsLoading(false);
-        return;
+        syncUserCookies(parsed);
       } catch {
         // continue
       }
@@ -119,8 +143,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (firebaseUser) {
           await fetchUserProfile(firebaseUser.uid, firebaseUser.email || '');
         } else {
-          setUser(null);
-          syncUserCookies(null);
+          // Si no hay sesión de Firebase ni demo válido
+          if (!savedDemo) {
+            setUser(null);
+            syncUserCookies(null);
+          }
         }
         setIsLoading(false);
       });

@@ -309,18 +309,25 @@ export default function AdminUsuariosPage() {
                     </td>
                     <td className="py-3.5 px-4">
                       {/* SELECTOR DE ROL: ADMINISTRADOR VS USUARIO */}
-                      <select
-                        value={u.rol}
-                        onChange={(e) => handleChangeRole(u.id, e.target.value as RolUsuario)}
-                        className={`px-3 py-1.5 rounded-xl border text-xs focus:outline-none cursor-pointer font-medium transition-all ${
-                          u.rol === 'admin'
-                            ? 'bg-[#a55850]/20 border-[#a55850] text-[#fbf7f4] font-semibold'
-                            : 'bg-[#140f0e] border-[#2d2220] text-[#a89b97] hover:border-[#3b2c29]'
-                        }`}
-                      >
-                        <option value="user">Usuario (Sin Panel)</option>
-                        <option value="admin">⭐ Administrador (Ve Panel Admin)</option>
-                      </select>
+                      {u.email.toLowerCase().trim() === 'vargasmael@gmail.com' ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#a55850]/20 border border-[#a55850] text-[#fbf7f4] font-semibold text-xs shadow-sm">
+                          <Shield className="w-3.5 h-3.5 text-[#a55850]" />
+                          ⭐ Master Admin (Dueño)
+                        </span>
+                      ) : (
+                        <select
+                          value={u.rol}
+                          onChange={(e) => handleChangeRole(u.id, e.target.value as RolUsuario)}
+                          className={`px-3 py-1.5 rounded-xl border text-xs focus:outline-none cursor-pointer font-medium transition-all ${
+                            u.rol === 'admin'
+                              ? 'bg-[#a55850]/20 border-[#a55850] text-[#fbf7f4] font-semibold'
+                              : 'bg-[#140f0e] border-[#2d2220] text-[#a89b97] hover:border-[#3b2c29]'
+                          }`}
+                        >
+                          <option value="user">Usuario (Sin Panel)</option>
+                          <option value="admin">⭐ Administrador (Ve Panel Admin)</option>
+                        </select>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
                       {getStatusBadge(u.estado_suscripcion)}

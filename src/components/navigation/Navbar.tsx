@@ -32,6 +32,13 @@ export function Navbar() {
   const isPublicPage = pathname === '/' || pathname === '/login' || pathname === '/registro';
   if (pathname.startsWith('/admin')) return null;
 
+  const isAdmin = Boolean(
+    user &&
+      (user.rol === 'admin' ||
+        user.email?.toLowerCase().trim() === 'vargasmael@gmail.com' ||
+        user.email?.toLowerCase().trim() === 'admin@re-programa.cl')
+  );
+
   return (
     <header className="sticky top-0 z-30 w-full bg-[#140f0e]/90 backdrop-blur-md border-b border-[#2d2220]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -95,7 +102,7 @@ export function Navbar() {
                 Mis Favoritos
               </Link>
 
-              {user.rol === 'admin' && (
+              {isAdmin && (
                 <Link
                   href="/admin"
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1e1716] border border-[#a55850]/50 text-[#d8aba1] hover:text-white hover:border-[#a55850] shadow-sm transition-colors text-xs font-medium"
@@ -189,7 +196,7 @@ export function Navbar() {
                     </Link>
                   )}
 
-                  {user.rol === 'admin' && (
+                  {isAdmin && (
                     <Link
                       href="/admin"
                       onClick={() => setUserDropdown(false)}
@@ -275,7 +282,7 @@ export function Navbar() {
               >
                 Mi Cuenta & Membresía
               </Link>
-              {user.rol === 'admin' && (
+              {isAdmin && (
                 <Link
                   href="/admin"
                   onClick={() => setMenuOpen(false)}

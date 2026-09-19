@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
 
   const authCookie = request.cookies.get('reprograma_auth')?.value;
   const roleCookie = request.cookies.get('reprograma_role')?.value;
+  const emailCookie = decodeURIComponent(request.cookies.get('reprograma_email')?.value || '').toLowerCase().trim();
 
   // 1. Si no hay cookie de sesión autenticada -> Redirigir a /login
   if (!authCookie) {
@@ -43,7 +44,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  const isAdmin = roleCookie === 'admin';
+  const isMasterAdmin = emailCookie === 'vargasmael@gmail.com' || emailCookie === 'admin@re-programa.cl';
+  const isAdmin = roleCookie === 'admin' || isMasterAdmin;
 
   // 2. Proteger /admin -> Solo administradores
   if (pathname.startsWith('/admin') && !isAdmin) {
