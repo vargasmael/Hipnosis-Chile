@@ -66,9 +66,9 @@ export function SessionCard({
     return (
       <div
         onClick={handlePlayClick}
-        className="group flex items-center gap-4 p-3 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800/80 hover:border-slate-700/80 transition-all cursor-pointer shadow-sm"
+        className="group flex items-center gap-4 p-3 rounded-2xl bg-[#1e1716] hover:bg-[#251d1c] border border-[#3b2c29] hover:border-[#a55850]/50 transition-all cursor-pointer shadow-sm"
       >
-        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-slate-800 shrink-0">
+        <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#251d1c] shrink-0 border border-[#3b2c29]">
           {(session.imagen_url || session.url_imagen_portada) ? (
             <img
               src={session.imagen_url || session.url_imagen_portada || ''}
@@ -76,12 +76,12 @@ export function SessionCard({
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-indigo-950 text-indigo-400">
+            <div className="w-full h-full flex items-center justify-center bg-[#251d1c] text-[#a55850]">
               <Sparkles className="w-6 h-6" />
             </div>
           )}
           <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow">
+            <div className="w-8 h-8 rounded-full bg-[#a55850] text-white flex items-center justify-center shadow-md shadow-[#a55850]/40">
               {isCurrentPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
             </div>
           </div>
@@ -89,25 +89,25 @@ export function SessionCard({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-950/60 px-2 py-0.5 rounded-full">
+            <span className="text-[11px] font-semibold text-[#b98d76] bg-[#140f0e] border border-[#3b2c29] px-2 py-0.5 rounded-full font-sans-persona">
               {session.categoria?.nombre || 'Bienestar'}
             </span>
-            <span className="text-xs text-slate-400 flex items-center gap-1">
-              <Clock className="w-3 h-3" /> {durationMinutes} min
+            <span className="text-xs text-[#a89b97] flex items-center gap-1">
+              <Clock className="w-3 h-3 text-[#b98d76]" /> {durationMinutes} min
             </span>
           </div>
-          <h4 className="text-sm font-semibold text-white truncate group-hover:text-indigo-300 transition-colors">
+          <h4 className="font-serif-persona text-sm font-normal text-[#fbf7f4] truncate group-hover:text-[#d8aba1] transition-colors">
             {sessionTitle}
           </h4>
-          <p className="text-xs text-slate-400 truncate mt-0.5">
+          <p className="text-xs text-[#7d6f6b] truncate mt-0.5 font-light">
             {session.guia_o_autor}
           </p>
 
           {/* Barra de progreso si hay progreso previo */}
           {progressSeconds > 0 && session.duracion > 0 && (
-            <div className="mt-2 w-full max-w-[200px] h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div className="mt-2 w-full max-w-[200px] h-1 bg-[#140f0e] rounded-full overflow-hidden border border-[#3b2c29]/50">
               <div
-                className="h-full bg-indigo-500 rounded-full"
+                className="h-full bg-[#a55850] rounded-full"
                 style={{ width: `${Math.min(100, (progressSeconds / session.duracion) * 100)}%` }}
               />
             </div>
@@ -116,8 +116,8 @@ export function SessionCard({
 
         <button
           onClick={handleFavoriteClick}
-          className={`p-2 rounded-full hover:bg-slate-700/60 transition-colors ${
-            isFavorited ? 'text-rose-500' : 'text-slate-400 hover:text-white'
+          className={`p-2 rounded-full hover:bg-[#251d1c] transition-colors ${
+            isFavorited ? 'text-[#a55850]' : 'text-[#a89b97] hover:text-white'
           }`}
         >
           <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />

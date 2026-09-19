@@ -47,32 +47,32 @@ export default function BuscarPage() {
   });
 
   return (
-    <div className="min-h-screen pb-32 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8">
+    <div className="min-h-screen pb-32 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-8 font-sans-persona">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+        <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
           Explorar & Buscar
         </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
+        <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
           Encuentra la sesión perfecta según tu estado de ánimo, síntoma o tiempo disponible.
         </p>
       </div>
 
       {/* Buscador Input */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#a89b97]" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Busca por título, síntoma (ej. insomnio, estrés) o terapeuta..."
-          className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors shadow-lg"
+          className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-[#1e1716] border border-[#3b2c29] text-sm text-[#ece5e2] placeholder-[#7d6f6b] focus:outline-none focus:border-[#a55850] transition-colors shadow-lg"
         />
       </div>
 
       {/* Filtros de Duración */}
       <div className="space-y-2">
-        <span className="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-          <Clock className="w-3.5 h-3.5 text-indigo-400" /> Filtrar por duración:
+        <span className="text-xs font-semibold text-[#b98d76] flex items-center gap-1.5 font-sans-persona">
+          <Clock className="w-3.5 h-3.5 text-[#a55850]" /> Filtrar por duración:
         </span>
         <div className="flex flex-wrap gap-2">
           {[
@@ -86,8 +86,8 @@ export default function BuscarPage() {
               onClick={() => setSelectedDuration(item.id as any)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
                 selectedDuration === item.id
-                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
-                  : 'bg-slate-900 text-slate-300 border border-slate-800 hover:bg-slate-800'
+                  ? 'bg-[#a55850] text-white font-semibold shadow-md shadow-[#a55850]/25'
+                  : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#3b2c29] hover:bg-[#251d1c]'
               }`}
             >
               {item.label}
@@ -98,7 +98,7 @@ export default function BuscarPage() {
 
       {/* Categorías Cards */}
       <div className="space-y-2">
-        <span className="text-xs font-semibold text-slate-400 block">
+        <span className="text-xs font-semibold text-[#b98d76] block font-sans-persona">
           Categorías temáticas:
         </span>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
@@ -106,11 +106,11 @@ export default function BuscarPage() {
             onClick={() => setSelectedCat(null)}
             className={`p-3 rounded-2xl border text-left transition-all ${
               selectedCat === null
-                ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800'
+                ? 'bg-[#a55850]/20 border-[#a55850] text-[#fbf7f4]'
+                : 'bg-[#1e1716] border-[#3b2c29] text-[#a89b97] hover:text-[#fbf7f4] hover:bg-[#251d1c]'
             }`}
           >
-            <Sparkles className="w-4 h-4 text-indigo-400 mb-1" />
+            <Sparkles className="w-4 h-4 text-[#b98d76] mb-1" />
             <span className="text-xs font-semibold block">Todas</span>
           </button>
           {categories.map((cat) => (
@@ -119,12 +119,12 @@ export default function BuscarPage() {
               onClick={() => setSelectedCat(selectedCat === cat.id ? null : cat.id)}
               className={`p-3 rounded-2xl border text-left transition-all ${
                 selectedCat === cat.id
-                  ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                  : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800'
+                  ? 'bg-[#a55850]/20 border-[#a55850] text-[#fbf7f4]'
+                  : 'bg-[#1e1716] border-[#3b2c29] text-[#a89b97] hover:text-[#fbf7f4] hover:bg-[#251d1c]'
               }`}
             >
               <span className="text-xs font-semibold block truncate">{cat.nombre}</span>
-              <span className="text-[10px] text-slate-400 block mt-0.5 line-clamp-1">
+              <span className="text-[10px] text-[#7d6f6b] block mt-0.5 line-clamp-1 font-light">
                 {cat.descripcion || 'Sesiones guiadas'}
               </span>
             </button>
@@ -133,9 +133,9 @@ export default function BuscarPage() {
       </div>
 
       {/* Resultados */}
-      <div className="space-y-4 pt-4 border-t border-slate-800">
+      <div className="space-y-4 pt-4 border-t border-[#2d2220]">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">
+          <h2 className="font-serif-persona text-lg font-normal text-[#fbf7f4]">
             Resultados ({filtered.length})
           </h2>
           {(search || selectedCat || selectedDuration !== 'all') && (
@@ -145,7 +145,7 @@ export default function BuscarPage() {
                 setSelectedCat(null);
                 setSelectedDuration('all');
               }}
-              className="text-xs text-indigo-400 hover:underline"
+              className="text-xs text-[#b98d76] hover:text-[#d8aba1] underline transition-colors"
             >
               Limpiar filtros
             </button>
@@ -153,11 +153,11 @@ export default function BuscarPage() {
         </div>
 
         {loading ? (
-          <div className="py-20 text-center text-slate-400 text-sm">Buscando...</div>
+          <div className="py-20 text-center text-[#a89b97] text-sm font-light">Buscando...</div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-slate-400 bg-slate-900/40 rounded-3xl border border-slate-800 p-8">
-            <p className="font-semibold text-white">No encontramos sesiones con esos filtros</p>
-            <p className="text-xs text-slate-400 mt-1">Intenta con una duración más amplia o palabras clave generales.</p>
+          <div className="py-16 text-center text-[#a89b97] bg-[#1e1716] rounded-3xl border border-[#3b2c29] p-8 space-y-2">
+            <p className="font-serif-persona text-xl text-[#fbf7f4]">No encontramos sesiones con esos filtros</p>
+            <p className="text-xs text-[#a89b97] font-light">Intenta con una duración más amplia o palabras clave generales.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

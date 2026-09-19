@@ -11,13 +11,14 @@ import {
   XCircle,
   Shield,
 } from 'lucide-react';
-import { Usuario, EstadoSuscripcion } from '@/types/database';
+import { Usuario, EstadoSuscripcion, RolUsuario } from '@/types/database';
 
 export default function AdminUsuariosPage() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EstadoSuscripcion>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'user'>('all');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const fetchUsers = async () => {
@@ -70,15 +71,35 @@ export default function AdminUsuariosPage() {
     }
   };
 
+  const handleChangeRole = async (userId: string, newRole: RolUsuario) => {
+    try {
+      await updateDoc(doc(db, 'usuarios', userId), {
+        rol: newRole,
+        updated_at: new Date().toISOString(),
+      });
+      setUsers((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, rol: newRole } : u))
+      );
+      showToast(
+        newRole === 'admin'
+          ? '⭐ Usuario ascendido a Administrador (Verá el botón Panel Admin)'
+          : 'Rol cambiado a Usuario Regular (Ya no verá el Panel Admin)'
+      );
+    } catch (err: any) {
+      showToast(err?.message || 'Error al actualizar rol en Firestore');
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
     const matchStatus = statusFilter === 'all' ? true : u.estado_suscripcion === statusFilter;
+    const matchRole = roleFilter === 'all' ? true : u.rol === roleFilter;
     const query = searchQuery.toLowerCase().trim();
     const matchSearch = query
       ? u.email.toLowerCase().includes(query) ||
         (u.nombre_completo && u.nombre_completo.toLowerCase().includes(query)) ||
         (u.id_suscripcion_mercadopago && u.id_suscripcion_mercadopago.toLowerCase().includes(query))
       : true;
-    return matchStatus && matchSearch;
+    return matchStatus && matchRole && matchSearch;
   });
 
   const getStatusBadge = (status: EstadoSuscripcion) => {
@@ -103,7 +124,7 @@ export default function AdminUsuariosPage() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-slate-800 text-slate-400">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-[#140f0e] text-[#a89b97] border border-[#2d2220]">
             {status}
           </span>
         );
@@ -114,7 +135,7 @@ export default function AdminUsuariosPage() {
     <div className="p-6 sm:p-10 max-w-7xl mx-auto space-y-8 font-sans-persona">
       {/* Toast Alert */}
       {toastMsg && (
-        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-[#a55850] text-white shadow-2xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-top-4">
+        <div className="fixed top-20 right-6 z-50 p-4 rounded-2xl bg-[#a55850] text-white shadow-2xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-top-4 border border-[#b8665d]">
           <CheckCircle2 className="w-4 h-4" />
           <span>{toastMsg}</span>
         </div>
@@ -125,24 +146,40 @@ export default function AdminUsuariosPage() {
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1e1716] border border-[#3b2c29] text-[11px] font-semibold text-[#b98d76] mb-2">
             <Users className="w-3.5 h-3.5 text-[#a55850]" />
-            <span>Base de Miembros (Firestore)</span>
+            <span>Base de Miembros & Control de Acceso (Firestore)</span>
           </div>
           <h1 className="font-serif-persona text-2xl sm:text-4xl font-normal text-[#fbf7f4] tracking-tight">
-            Gestión de Usuarios
+            Gestión de Usuarios y Roles
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Monitorea el estado de suscripción de los miembros directamente en la colección `usuarios` de Firestore.
+            Asigna qué usuarios tienen acceso al <strong>Panel de Administrador</strong> arriba y gestiona el estado de su membresía.
           </p>
         </div>
 
-        <div className="text-xs text-[#a89b97] bg-[#1e1716] px-4 py-2 rounded-2xl border border-[#2d2220]">
-          Total registrados: <strong className="text-[#fbf7f4]">{users.length}</strong>
+        <div className="flex items-center gap-2">
+          <div className="text-xs text-[#a89b97] bg-[#1e1716] px-3.5 py-2 rounded-2xl border border-[#2d2220]">
+            Admins: <strong className="text-[#d8aba1]">{users.filter((u) => u.rol === 'admin').length}</strong>
+          </div>
+          <div className="text-xs text-[#a89b97] bg-[#1e1716] px-3.5 py-2 rounded-2xl border border-[#2d2220]">
+            Total: <strong className="text-[#fbf7f4]">{users.length}</strong>
+          </div>
         </div>
       </div>
 
-      {/* Barra de Búsqueda y Filtros de Estado */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:w-80">
+      {/* Explicación de Permisos de Administrador */}
+      <div className="p-4 rounded-2xl bg-[#241816] border border-[#a55850]/40 flex items-start gap-3 text-xs text-[#d8aba1]">
+        <Shield className="w-5 h-5 text-[#a55850] shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-semibold text-[#fbf7f4]">Control Exclusivo de Administradores</p>
+          <p className="text-[#a89b97] font-light leading-relaxed">
+            Solo los usuarios con rol <strong>Administrador</strong> podrán ver y presionar el botón <strong>«Panel Admin»</strong> en la barra de navegación superior. Para cualquier usuario regular, dicha opción permanecerá completamente invisible e inaccesible.
+          </p>
+        </div>
+      </div>
+
+      {/* Barra de Búsqueda y Filtros */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+        <div className="relative w-full lg:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89b97]" />
           <input
             type="text"
@@ -153,47 +190,74 @@ export default function AdminUsuariosPage() {
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 scrollbar-none">
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
-              statusFilter === 'all'
-                ? 'bg-[#a55850] text-white'
-                : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
-            }`}
-          >
-            Todos ({users.length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('activa')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
-              statusFilter === 'activa'
-                ? 'bg-[#a55850] text-white'
-                : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
-            }`}
-          >
-            Activos ({users.filter((u) => u.estado_suscripcion === 'activa').length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('inactiva')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
-              statusFilter === 'inactiva'
-                ? 'bg-[#a55850] text-white'
-                : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
-            }`}
-          >
-            Inactivos ({users.filter((u) => u.estado_suscripcion === 'inactiva').length})
-          </button>
-          <button
-            onClick={() => setStatusFilter('cancelada')}
-            className={`px-3.5 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
-              statusFilter === 'cancelada'
-                ? 'bg-[#a55850] text-white'
-                : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
-            }`}
-          >
-            Cancelados ({users.filter((u) => u.estado_suscripcion === 'cancelada').length})
-          </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filtro por Rol */}
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#140f0e] border border-[#2d2220]">
+            <button
+              onClick={() => setRoleFilter('all')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                roleFilter === 'all'
+                  ? 'bg-[#a55850] text-white'
+                  : 'text-[#a89b97] hover:text-[#fbf7f4]'
+              }`}
+            >
+              Todos
+            </button>
+            <button
+              onClick={() => setRoleFilter('admin')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                roleFilter === 'admin'
+                  ? 'bg-[#a55850] text-white'
+                  : 'text-[#a89b97] hover:text-[#fbf7f4]'
+              }`}
+            >
+              ⭐ Admins ({users.filter((u) => u.rol === 'admin').length})
+            </button>
+            <button
+              onClick={() => setRoleFilter('user')}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                roleFilter === 'user'
+                  ? 'bg-[#a55850] text-white'
+                  : 'text-[#a89b97] hover:text-[#fbf7f4]'
+              }`}
+            >
+              Usuarios ({users.filter((u) => u.rol === 'user').length})
+            </button>
+          </div>
+
+          {/* Filtro por Membresía */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
+                statusFilter === 'all'
+                  ? 'bg-[#2d2220] text-white'
+                  : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
+              }`}
+            >
+              Todas Membresías
+            </button>
+            <button
+              onClick={() => setStatusFilter('activa')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
+                statusFilter === 'activa'
+                  ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
+                  : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
+              }`}
+            >
+              Activos
+            </button>
+            <button
+              onClick={() => setStatusFilter('inactiva')}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium shrink-0 transition-colors ${
+                statusFilter === 'inactiva'
+                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  : 'bg-[#1e1716] text-[#a89b97] hover:text-[#fbf7f4] border border-[#2d2220]'
+              }`}
+            >
+              Inactivos
+            </button>
+          </div>
         </div>
       </div>
 
@@ -219,10 +283,10 @@ export default function AdminUsuariosPage() {
               <thead className="bg-[#140f0e] text-[#7d6f6b] uppercase text-[10px] tracking-wider border-b border-[#2d2220]">
                 <tr>
                   <th className="py-3.5 px-5">Usuario</th>
-                  <th className="py-3.5 px-4">Rol</th>
-                  <th className="py-3.5 px-4">ID Mercado Pago</th>
+                  <th className="py-3.5 px-4">Rol / Permiso Admin</th>
                   <th className="py-3.5 px-4">Estado Membresía</th>
-                  <th className="py-3.5 px-4 text-right">Modificar Acceso</th>
+                  <th className="py-3.5 px-4">ID Mercado Pago</th>
+                  <th className="py-3.5 px-4 text-right">Membresía</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2d2220] text-[#c7b9b4]">
@@ -244,22 +308,25 @@ export default function AdminUsuariosPage() {
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-semibold ${
+                      {/* SELECTOR DE ROL: ADMINISTRADOR VS USUARIO */}
+                      <select
+                        value={u.rol}
+                        onChange={(e) => handleChangeRole(u.id, e.target.value as RolUsuario)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs focus:outline-none cursor-pointer font-medium transition-all ${
                           u.rol === 'admin'
-                            ? 'bg-[#a55850]/20 text-[#d8aba1] border border-[#a55850]/40'
-                            : 'bg-[#140f0e] text-[#a89b97] border border-[#2d2220]'
+                            ? 'bg-[#a55850]/20 border-[#a55850] text-[#fbf7f4] font-semibold'
+                            : 'bg-[#140f0e] border-[#2d2220] text-[#a89b97] hover:border-[#3b2c29]'
                         }`}
                       >
-                        {u.rol === 'admin' && <Shield className="w-3 h-3" />}
-                        {u.rol}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-[11px] text-[#8b7d78]">
-                      {u.id_suscripcion_mercadopago || 'Sin suscripción activa'}
+                        <option value="user">Usuario (Sin Panel)</option>
+                        <option value="admin">⭐ Administrador (Ve Panel Admin)</option>
+                      </select>
                     </td>
                     <td className="py-3.5 px-4">
                       {getStatusBadge(u.estado_suscripcion)}
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-[11px] text-[#8b7d78]">
+                      {u.id_suscripcion_mercadopago || 'Sin suscripción activa'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <select

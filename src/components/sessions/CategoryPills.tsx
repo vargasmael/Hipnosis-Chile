@@ -36,10 +36,10 @@ export function CategoryPills({
     <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none no-scrollbar">
       <button
         onClick={() => onSelectCategory(null)}
-        className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all ${
+        className={`shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-xs transition-all ${
           selectedId === null
-            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-105'
-            : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+            ? 'bg-[#a55850] text-white shadow-md shadow-[#a55850]/30 scale-105 font-semibold'
+            : 'bg-[#1e1716] hover:bg-[#251d1c] text-[#a89b97] hover:text-[#fbf7f4] border border-[#3b2c29]'
         }`}
       >
         <span>Todas las Sesiones</span>
@@ -51,10 +51,10 @@ export function CategoryPills({
           <button
             key={cat.id}
             onClick={() => onSelectCategory(cat.id)}
-            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium transition-all ${
+            className={`shrink-0 flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs transition-all ${
               isSelected
-                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30 scale-105 font-semibold'
-                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800'
+                ? 'bg-[#a55850] text-white shadow-md shadow-[#a55850]/30 scale-105 font-semibold'
+                : 'bg-[#1e1716] hover:bg-[#251d1c] text-[#a89b97] hover:text-[#fbf7f4] border border-[#3b2c29]'
             }`}
           >
             {getIcon(cat.slug)}
