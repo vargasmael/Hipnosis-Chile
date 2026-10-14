@@ -15,6 +15,7 @@ import {
   Film,
   Plus,
   Trash2,
+  Pencil,
   Upload,
   CheckCircle2,
   Star,
@@ -22,7 +23,7 @@ import {
   Clock,
   Search,
   X,
-  Headphones
+  Headphones,
 } from 'lucide-react';
 import { Sesion, Categoria } from '@/types/database';
 
@@ -40,19 +41,37 @@ export default function AdminSesionesPage() {
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [durationMinutes, setDurationMinutes] = useState(15);
+  const [durationSeconds, setDurationSeconds] = useState(0);
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [isFeatured, setIsFeatured] = useState(false);
   const [author, setAuthor] = useState('Dra. Valentina Montes');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // 2. Función de subida a Cloudinary
+  // Modal edición de sesión existente
+  const [editingSession, setEditingSession] = useState<Sesion | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editCategoryId, setEditCategoryId] = useState('');
+  const [editDurationMinutes, setEditDurationMinutes] = useState(15);
+  const [editDurationSeconds, setEditDurationSeconds] = useState(0);
+  const [editAuthor, setEditAuthor] = useState('Dra. Valentina Montes');
+  const [editIsFeatured, setEditIsFeatured] = useState(false);
+  const [editCoverImageFile, setEditCoverImageFile] = useState<File | null>(null);
+  const [editAudioFile, setEditAudioFile] = useState<File | null>(null);
+  const [editExistingImageUrl, setEditExistingImageUrl] = useState('');
+  const [editExistingAudioUrl, setEditExistingAudioUrl] = useState('');
+
+  // Función de subida a Cloudinary
   const uploadToCloudinary = async (file: File): Promise<string> => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
     if (!cloudName || !uploadPreset) {
-      throw new Error('Configuración de Cloudinary incompleta (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME o NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)');
+      throw new Error(
+        'Configuración de Cloudinary incompleta (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME o NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET)'
+      );
     }
 
     const formData = new FormData();
@@ -148,7 +167,7 @@ export default function AdminSesionesPage() {
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
-    setTimeout(() => setToastMsg(null), 3000);
+    setTimeout(() => setToastMsg(null), 3500);
   };
 
   const handleCreateSession = async (e: React.FormEvent) => {
@@ -161,6 +180,12 @@ export default function AdminSesionesPage() {
     }
     if (!audioFile) {
       showToast('Por favor selecciona un archivo de audio');
+      return;
+    }
+
+    const totalSeconds = (Number(durationMinutes) || 0) * 60 + (Number(durationSeconds) || 0);
+    if (totalSeconds <= 0) {
+      showToast('La duración debe ser mayor a 0 segundos');
       return;
     }
 
@@ -183,7 +208,8 @@ export default function AdminSesionesPage() {
         categoria_id: categoryId || (categories[0]?.id ?? 'ansiedad-estres'),
         id_categoria: categoryId || (categories[0]?.id ?? 'ansiedad-estres'),
         categoria: selectedCat ? selectedCat : undefined,
-        duracion: Number(durationMinutes) * 60,
+        duracion: totalSeconds,
+        duration: totalSeconds,
         audio_url: audioUrl,
         url_archivo_multimedia: audioUrl,
         imagen_url: imageUrl,
@@ -196,10 +222,10 @@ export default function AdminSesionesPage() {
         updated_at: new Date().toISOString(),
       };
 
-      // 4. Solo cuando ambas subidas terminen, ejecuta addDoc en Firestore guardando esas URLs reales
+      // 4. addDoc en Firestore
       const docRef = await addDoc(collection(db, 'sesiones'), newRecord);
 
-      showToast('Nueva sesión y archivos subidos con éxito');
+      showToast('Nueva sesión y archivos guardados con éxito');
       const createdSession: Sesion = {
         ...newRecord,
         id: docRef.id,
@@ -213,6 +239,8 @@ export default function AdminSesionesPage() {
       setCoverImageFile(null);
       setAudioFile(null);
       setIsFeatured(false);
+      setDurationMinutes(15);
+      setDurationSeconds(0);
     } catch (err: any) {
       console.error('Error al subir archivos o crear sesión:', err);
       showToast(err?.message || 'Error al procesar la subida a Cloudinary');
@@ -221,7 +249,99 @@ export default function AdminSesionesPage() {
     }
   };
 
+  const handleOpenEdit = (session: Sesion) => {
+    setEditingSession(session);
+    setEditTitle(session.titulo || session.title || '');
+    setEditDescription(session.descripcion || session.description || '');
+    setEditCategoryId(session.categoria_id || session.id_categoria || (categories[0]?.id ?? ''));
+
+    const totalSecs = Number(session.duracion) || 0;
+    setEditDurationMinutes(Math.floor(totalSecs / 60));
+    setEditDurationSeconds(totalSecs % 60);
+
+    setEditAuthor(session.guia_o_autor || 'Dra. Valentina Montes');
+    setEditIsFeatured(Boolean(session.destacado));
+    setEditExistingImageUrl(session.imagen_url || session.url_imagen_portada || '');
+    setEditExistingAudioUrl(session.audio_url || session.url_archivo_multimedia || '');
+    setEditCoverImageFile(null);
+    setEditAudioFile(null);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingSession) return;
+
+    if (!editTitle.trim()) {
+      showToast('El título no puede estar vacío');
+      return;
+    }
+
+    const totalSeconds = (Number(editDurationMinutes) || 0) * 60 + (Number(editDurationSeconds) || 0);
+    if (totalSeconds <= 0) {
+      showToast('La duración debe ser mayor a 0 segundos');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      let finalImageUrl = editExistingImageUrl;
+      let finalAudioUrl = editExistingAudioUrl;
+
+      // Subir nueva portada si fue seleccionada
+      if (editCoverImageFile) {
+        finalImageUrl = await uploadToCloudinary(editCoverImageFile);
+      }
+
+      // Subir nuevo audio si fue seleccionado
+      if (editAudioFile) {
+        finalAudioUrl = await uploadToCloudinary(editAudioFile);
+      }
+
+      const selectedCat = categories.find((c) => c.id === editCategoryId);
+
+      const updatedRecord = {
+        titulo: editTitle.trim(),
+        title: editTitle.trim(),
+        descripcion: editDescription.trim(),
+        description: editDescription.trim(),
+        categoria_id: editCategoryId || (categories[0]?.id ?? 'ansiedad-estres'),
+        id_categoria: editCategoryId || (categories[0]?.id ?? 'ansiedad-estres'),
+        categoria: selectedCat ? selectedCat : undefined,
+        duracion: totalSeconds,
+        duration: totalSeconds,
+        audio_url: finalAudioUrl,
+        url_archivo_multimedia: finalAudioUrl,
+        imagen_url: finalImageUrl,
+        url_imagen_portada: finalImageUrl,
+        destacado: Boolean(editIsFeatured),
+        guia_o_autor: editAuthor.trim() || 'Dra. Valentina Montes',
+        updated_at: new Date().toISOString(),
+      };
+
+      await updateDoc(doc(db, 'sesiones', editingSession.id), updatedRecord);
+
+      // Actualizar estado local
+      setSessions((prev) =>
+        prev.map((s) => (s.id === editingSession.id ? { ...s, ...updatedRecord } : s))
+      );
+
+      showToast('Sesión y duración actualizadas con éxito en Firestore');
+      setShowEditModal(false);
+      setEditingSession(null);
+    } catch (err: any) {
+      console.error('Error al actualizar sesión en Firestore:', err);
+      showToast(err?.message || 'Error al actualizar sesión en Firestore');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleDeleteSession = async (id: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta sesión de Firestore?')) {
+      return;
+    }
     try {
       await deleteDoc(doc(db, 'sesiones', id));
       setSessions((prev) => prev.filter((s) => s.id !== id));
@@ -246,7 +366,7 @@ export default function AdminSesionesPage() {
 
   const filteredSessions = sessions.filter((s) => {
     const matchCategory = selectedCategoryFilter
-      ? (s.categoria_id === selectedCategoryFilter || s.id_categoria === selectedCategoryFilter)
+      ? s.categoria_id === selectedCategoryFilter || s.id_categoria === selectedCategoryFilter
       : true;
     const matchSearch = searchQuery
       ? s.titulo.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -276,13 +396,13 @@ export default function AdminSesionesPage() {
             Gestión de Sesiones (Firestore)
           </h1>
           <p className="text-xs sm:text-sm text-[#a89b97] mt-1 font-light">
-            Crea, edita y organiza las inducciones guiadas consultando y escribiendo directamente en la base de datos de Firestore.
+            Crea, edita, corrige duraciones y organiza las inducciones guiadas directamente en Firestore.
           </p>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white text-xs font-medium tracking-wide shadow-lg shadow-[#a55850]/20 transition-all hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white text-xs font-medium tracking-wide shadow-lg shadow-[#a55850]/20 transition-all hover:scale-105 active:scale-95 cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Nueva Sesión</span>
@@ -341,11 +461,11 @@ export default function AdminSesionesPage() {
             No hay sesiones disponibles aún
           </h3>
           <p className="text-xs sm:text-sm text-[#a89b97] max-w-sm mx-auto font-light leading-relaxed">
-            Aún no se han registrado audios en la colección `sesiones` de Firestore o no coinciden con tu búsqueda. Haz clic en "Nueva Sesión" para crear la primera.
+            Aún no se han registrado audios en la colección `sesiones` de Firestore o no coinciden con tu búsqueda. Haz clic en &quot;Nueva Sesión&quot; para crear la primera.
           </p>
           <button
             onClick={() => setShowModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a55850] text-white text-xs font-medium shadow-md shadow-[#a55850]/20"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#a55850] text-white text-xs font-medium shadow-md shadow-[#a55850]/20 cursor-pointer"
           >
             <Plus className="w-4 h-4" /> Crear Primera Sesión
           </button>
@@ -387,7 +507,10 @@ export default function AdminSesionesPage() {
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5 text-[#a89b97]">
                         <Clock className="w-3.5 h-3.5 text-[#7d6f6b]" />
-                        <span>{Math.round(session.duracion / 60)} min</span>
+                        <span className="font-medium">
+                          {Math.floor(session.duracion / 60)} min
+                          {session.duracion % 60 > 0 ? ` ${session.duracion % 60}s` : ''}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
@@ -404,13 +527,22 @@ export default function AdminSesionesPage() {
                       </button>
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleDeleteSession(session.id)}
-                        className="p-2 rounded-xl text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] transition-colors"
-                        title="Eliminar sesión de Firestore"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handleOpenEdit(session)}
+                          className="p-2 rounded-xl text-[#b98d76] hover:text-[#fbf7f4] hover:bg-[#251d1c] transition-colors cursor-pointer"
+                          title="Editar sesión y corregir tiempo"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSession(session.id)}
+                          className="p-2 rounded-xl text-[#7d6f6b] hover:text-red-400 hover:bg-[#140f0e] transition-colors cursor-pointer"
+                          title="Eliminar sesión de Firestore"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -423,7 +555,7 @@ export default function AdminSesionesPage() {
       {/* MODAL NUEVA SESIÓN CON GUARDADO EN FIRESTORE (addDoc) */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="w-full max-w-xl my-8 p-6 sm:p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] shadow-2xl space-y-6">
+          <div className="w-full max-w-xl my-8 p-6 sm:p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] shadow-2xl space-y-6 animate-in fade-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-[#2d2220] pb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[#a55850]" />
@@ -432,8 +564,11 @@ export default function AdminSesionesPage() {
                 </h3>
               </div>
               <button
-                onClick={() => setShowModal(false)}
-                className="p-1 text-[#7d6f6b] hover:text-white rounded-lg"
+                onClick={() => {
+                  if (!uploading) setShowModal(false);
+                }}
+                disabled={uploading}
+                className="p-1 text-[#7d6f6b] hover:text-white rounded-lg disabled:opacity-40"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -474,7 +609,7 @@ export default function AdminSesionesPage() {
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850]"
                   >
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
@@ -486,15 +621,35 @@ export default function AdminSesionesPage() {
 
                 <div>
                   <label className="block text-[#a89b97] font-medium mb-1.5">
-                    Duración (minutos)
+                    Duración (Minutos y Segundos) *
                   </label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 10)}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none"
-                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={durationMinutes}
+                        onChange={(e) => setDurationMinutes(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850] pr-8"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#7d6f6b]">min</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        max={59}
+                        value={durationSeconds}
+                        onChange={(e) => setDurationSeconds(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850] pr-8"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#7d6f6b]">seg</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-[#7d6f6b] mt-1 block">
+                    Total: {(Number(durationMinutes) || 0) * 60 + (Number(durationSeconds) || 0)} segundos
+                  </span>
                 </div>
               </div>
 
@@ -506,13 +661,13 @@ export default function AdminSesionesPage() {
                   type="text"
                   value={author}
                   onChange={(e) => setAuthor(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850]"
                 />
               </div>
 
-              {/* Inputs de Archivo Cloudinary (accept image/* y audio/*) */}
+              {/* Inputs de Archivo Cloudinary */}
               <div className="p-4 rounded-2xl bg-[#140f0e] border border-[#2d2220] space-y-4">
-                <span className="text-[#b98d76] font-medium block flex items-center gap-1.5 text-xs">
+                <span className="text-[#b98d76] font-medium flex items-center gap-1.5 text-xs">
                   <Upload className="w-4 h-4 text-[#a55850]" /> Archivos Multimedia (Cloudinary CDN)
                 </span>
 
@@ -585,7 +740,7 @@ export default function AdminSesionesPage() {
                     setCoverImageFile(null);
                     setAudioFile(null);
                   }}
-                  className="px-4 py-2.5 rounded-full bg-[#140f0e] text-[#a89b97] hover:text-[#ece5e2] border border-[#2d2220] disabled:opacity-50"
+                  className="px-4 py-2.5 rounded-full bg-[#140f0e] text-[#a89b97] hover:text-[#ece5e2] border border-[#2d2220] disabled:opacity-50 cursor-pointer"
                 >
                   Cancelar
                 </button>
@@ -597,10 +752,269 @@ export default function AdminSesionesPage() {
                   {uploading ? (
                     <>
                       <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
-                      <span>Subiendo archivos y encriptando... por favor espera</span>
+                      <span>Subiendo archivos y procesando... por favor espera</span>
                     </>
                   ) : (
                     'Guardar en Firestore'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR SESIÓN EN FIRESTORE (updateDoc) */}
+      {showEditModal && editingSession && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-xl my-8 p-6 sm:p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] shadow-2xl space-y-6 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-[#2d2220] pb-4">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-[#a55850]" />
+                <div>
+                  <h3 className="font-serif-persona text-xl text-[#fbf7f4]">
+                    Editar Sesión
+                  </h3>
+                  <p className="text-[10px] text-[#7d6f6b] font-mono mt-0.5">
+                    ID: {editingSession.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!uploading) {
+                    setShowEditModal(false);
+                    setEditingSession(null);
+                  }
+                }}
+                disabled={uploading}
+                className="p-1 text-[#7d6f6b] hover:text-white rounded-lg disabled:opacity-40 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateSession} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-[#a89b97] font-medium mb-1.5">
+                  Título de la Sesión *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  placeholder="Ej. Reseteo Profundo de la Ansiedad y Calma Interior"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#a89b97] font-medium mb-1.5">
+                  Descripción Emocional / Propósito *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Explica qué sensaciones o problemas aborda la sesión..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[#a89b97] font-medium mb-1.5">Categoría</label>
+                  <select
+                    value={editCategoryId}
+                    onChange={(e) => setEditCategoryId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850]"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[#a89b97] font-medium mb-1.5">
+                    Duración exacta (Minutos y Segundos) *
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        required
+                        value={editDurationMinutes}
+                        onChange={(e) => setEditDurationMinutes(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850] pr-9 font-medium"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#7d6f6b]">min</span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        max={59}
+                        value={editDurationSeconds}
+                        onChange={(e) => setEditDurationSeconds(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850] pr-9 font-medium"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[#7d6f6b]">seg</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-[#b98d76] mt-1 bg-[#140f0e] px-2.5 py-1 rounded-lg border border-[#2d2220]">
+                    <span>Total a guardar:</span>
+                    <span className="font-semibold text-[#fbf7f4]">
+                      {editDurationMinutes}m {editDurationSeconds}s ({((Number(editDurationMinutes) || 0) * 60) + (Number(editDurationSeconds) || 0)} s)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#a89b97] font-medium mb-1.5">
+                  Terapeuta o Guía
+                </label>
+                <input
+                  type="text"
+                  value={editAuthor}
+                  onChange={(e) => setEditAuthor(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#140f0e] border border-[#2d2220] text-[#ece5e2] focus:outline-none focus:border-[#a55850]"
+                />
+              </div>
+
+              {/* Multimedia (Cloudinary CDN o URLs actuales) */}
+              <div className="p-4 rounded-2xl bg-[#140f0e] border border-[#2d2220] space-y-4">
+                <span className="text-[#b98d76] font-medium flex items-center gap-1.5 text-xs">
+                  <Upload className="w-4 h-4 text-[#a55850]" /> Archivos Multimedia (Opcional - solo si deseas cambiarlos)
+                </span>
+
+                {/* Imagen de portada */}
+                <div className="space-y-2">
+                  <label className="text-[#a89b97] block font-medium">
+                    Imagen de Portada
+                  </label>
+                  {editExistingImageUrl && (
+                    <div className="flex items-center gap-3 p-2 rounded-xl bg-[#1e1716] border border-[#2d2220]">
+                      <img
+                        src={editExistingImageUrl}
+                        alt="Portada actual"
+                        className="w-12 h-12 rounded-lg object-cover bg-[#140f0e] border border-[#3b2c29]"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[11px] text-[#ece5e2] block truncate font-medium">
+                          Portada actual guardada
+                        </span>
+                        <span className="text-[10px] text-[#7d6f6b] block truncate font-mono">
+                          {editExistingImageUrl}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setEditCoverImageFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-[#a89b97] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-semibold file:bg-[#2d2220] file:text-[#fbf7f4] hover:file:bg-[#3b2c29] cursor-pointer"
+                  />
+                  {editCoverImageFile ? (
+                    <span className="text-[11px] text-teal-400 block truncate">
+                      ✓ Nueva portada seleccionada: {editCoverImageFile.name} ({(editCoverImageFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#7d6f6b] block">
+                      Deja este campo vacío si deseas conservar la portada actual.
+                    </span>
+                  )}
+                </div>
+
+                {/* Archivo de audio */}
+                <div className="space-y-2 pt-2 border-t border-[#2d2220]">
+                  <label className="text-[#a89b97] block font-medium">
+                    Archivo de Audio (MP3 / WAV)
+                  </label>
+                  {editExistingAudioUrl && (
+                    <div className="p-2.5 rounded-xl bg-[#1e1716] border border-[#2d2220] space-y-2">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#ece5e2] font-medium">Audio actual vinculado</span>
+                        <a
+                          href={editExistingAudioUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#b98d76] hover:text-white transition-colors"
+                        >
+                          Escuchar en pestaña nueva ↗
+                        </a>
+                      </div>
+                      <audio
+                        controls
+                        src={editExistingAudioUrl}
+                        className="w-full h-8 opacity-80"
+                      />
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => setEditAudioFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-[#a89b97] file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-[11px] file:font-semibold file:bg-[#2d2220] file:text-[#fbf7f4] hover:file:bg-[#3b2c29] cursor-pointer"
+                  />
+                  {editAudioFile ? (
+                    <span className="text-[11px] text-teal-400 block truncate">
+                      ✓ Nuevo audio seleccionado: {editAudioFile.name} ({(editAudioFile.size / 1024 / 1024).toFixed(2)} MB)
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-[#7d6f6b] block">
+                      Deja este campo vacío si deseas conservar el archivo de audio actual.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Switch Destacado */}
+              <div className="flex items-center gap-3 pt-1">
+                <input
+                  type="checkbox"
+                  id="editIsFeatured"
+                  checked={editIsFeatured}
+                  onChange={(e) => setEditIsFeatured(e.target.checked)}
+                  className="w-4 h-4 rounded accent-[#a55850] bg-[#140f0e] border-[#2d2220]"
+                />
+                <label htmlFor="editIsFeatured" className="text-[#ece5e2] font-medium cursor-pointer">
+                  Marcar como sesión destacada en el carrusel de inicio
+                </label>
+              </div>
+
+              {/* Acciones */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-[#2d2220]">
+                <button
+                  type="button"
+                  disabled={uploading}
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingSession(null);
+                  }}
+                  className="px-4 py-2.5 rounded-full bg-[#140f0e] text-[#a89b97] hover:text-[#ece5e2] border border-[#2d2220] disabled:opacity-50 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="px-6 py-2.5 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white font-medium text-xs shadow-lg shadow-[#a55850]/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                >
+                  {uploading ? (
+                    <>
+                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                      <span>Actualizando sesión en Firestore...</span>
+                    </>
+                  ) : (
+                    'Guardar Cambios'
                   )}
                 </button>
               </div>
