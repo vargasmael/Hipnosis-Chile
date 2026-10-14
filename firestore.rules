@@ -1,0 +1,73 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Funciones de ayuda y autenticación
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Administradores maestros por correo (sin costo de lectura en Firestore)
+    function isMasterAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'vargasmael@gmail.com' ||
+        request.auth.token.email == 'admin@re-programa.cl'
+      );
+    }
+
+    // Administradores generales (maestros o con rol 'admin' en la base de datos)
+    function isAdmin() {
+      return isMasterAdmin() || (
+        isAuthenticated() &&
+        exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin'
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // 1. Colección de Usuarios
+    match /usuarios/{userId} {
+      // Lectura permitida a usuarios autenticados
+      allow read: if isAuthenticated();
+      // Creación: El usuario para su propio perfil o un administrador
+      allow create: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      // Actualización: El propio usuario o un administrador
+      allow update: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      // Eliminación: Exclusivo de administradores
+      allow delete: if isAdmin();
+    }
+
+    // 2. Colección de Categorías
+    match /categorias/{categoriaId} {
+      // Lectura pública para catálogo de la plataforma
+      allow read: if true;
+      // Escritura/modificación exclusiva de administradores
+      allow write: if isAdmin();
+    }
+
+    // 3. Colección de Sesiones
+    match /sesiones/{sesionId} {
+      // Lectura pública del catálogo de sesiones
+      allow read: if true;
+      // Escritura/modificación exclusiva de administradores
+      allow write: if isAdmin();
+    }
+
+    // 4. Colección de Progreso y Favoritos
+    match /progreso_favoritos/{docId} {
+      // Cada usuario lee y modifica únicamente su propio progreso/favoritos
+      allow read: if isAuthenticated() && (
+        resource == null || resource.data.id_usuario == request.auth.uid || isAdmin()
+      );
+      allow write: if isAuthenticated() && (
+        (request.resource != null && request.resource.data.id_usuario == request.auth.uid) ||
+        (resource != null && resource.data.id_usuario == request.auth.uid) ||
+        isAdmin()
+      );
+    }
+  }
+}
