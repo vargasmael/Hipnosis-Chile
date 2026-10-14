@@ -6,13 +6,14 @@ import { Sesion } from '@/types/database';
 import { usePlayer } from '@/context/PlayerContext';
 import { useAuth } from '@/context/AuthContext';
 import { toggleFavorito } from '@/lib/services/contentService';
-import { Play, Pause, Heart, Clock, Sparkles } from 'lucide-react';
+import { Play, Pause, Heart, Clock, Sparkles, Lock } from 'lucide-react';
 
 interface SessionCardProps {
   session: Sesion;
   variant?: 'grid' | 'horizontal';
   progressSeconds?: number;
   isInitiallyFavorited?: boolean;
+  playable?: boolean;
 }
 
 export function SessionCard({
@@ -20,9 +21,10 @@ export function SessionCard({
   variant = 'grid',
   progressSeconds = 0,
   isInitiallyFavorited = false,
+  playable = true,
 }: SessionCardProps) {
   const router = useRouter();
-  const { currentSession, isPlaying, playSession, togglePlay } = usePlayer();
+  const { currentSession, isPlaying } = usePlayer();
   const { user } = useAuth();
   const [isFavorited, setIsFavorited] = useState(isInitiallyFavorited);
 
@@ -34,45 +36,45 @@ export function SessionCard({
   const sessionTitle = session.titulo || (session as any).title || (session as any).nombre || 'Sesión sin título';
   const sessionDescription = session.descripcion || (session as any).description || '';
 
-  // Log temporal para verificar en consola de navegador la coincidencia de campos de Firestore
-  if (typeof window !== 'undefined') {
-    console.log('[SessionCard] Mapeo de título:', {
-      id: session.id,
-      titulo: session.titulo,
-      title: (session as any).title,
-      resolved: sessionTitle,
-    });
-  }
-
   const handleCardClick = () => {
+    if (!playable) {
+      router.push('/registro');
+      return;
+    }
     router.push(`/sesion/${session.id}`);
   };
 
   const handlePlayClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!playable) {
+      router.push('/registro');
+      return;
+    }
     router.push(`/sesion/${session.id}`);
   };
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!playable || !user) {
+      router.push('/registro');
+      return;
+    }
     const newState = !isFavorited;
     setIsFavorited(newState);
-    if (user) {
-      await toggleFavorito(user.id, session.id, newState);
-    }
+    await toggleFavorito(user.id, session.id, newState);
   };
 
   if (variant === 'horizontal') {
     return (
       <div
-        onClick={handlePlayClick}
+        onClick={handleCardClick}
         className="group flex items-center gap-4 p-3 rounded-2xl bg-[#1e1716] hover:bg-[#251d1c] border border-[#3b2c29] hover:border-[#a55850]/50 transition-all cursor-pointer shadow-sm"
       >
         <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden bg-[#251d1c] shrink-0 border border-[#3b2c29]">
           {(session.imagen_url || session.url_imagen_portada) ? (
             <img
               src={session.imagen_url || session.url_imagen_portada || ''}
-              alt={session.titulo}
+              alt={sessionTitle}
               className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
@@ -80,10 +82,16 @@ export function SessionCard({
               <Sparkles className="w-6 h-6" />
             </div>
           )}
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="w-8 h-8 rounded-full bg-[#a55850] text-white flex items-center justify-center shadow-md shadow-[#a55850]/40">
-              {isCurrentPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-            </div>
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            {playable ? (
+              <div className="w-8 h-8 rounded-full bg-[#a55850] text-white flex items-center justify-center shadow-md shadow-[#a55850]/40">
+                {isCurrentPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
+              </div>
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-[#1e1716] border border-[#a55850]/60 text-[#a55850] flex items-center justify-center shadow-md">
+                <Lock className="w-4 h-4" />
+              </div>
+            )}
           </div>
         </div>
 
@@ -92,6 +100,11 @@ export function SessionCard({
             <span className="text-[11px] font-semibold text-[#b98d76] bg-[#140f0e] border border-[#3b2c29] px-2 py-0.5 rounded-full font-sans-persona">
               {session.categoria?.nombre || 'Bienestar'}
             </span>
+            {!playable && (
+              <span className="text-[10px] font-semibold text-[#a55850] flex items-center gap-0.5 bg-[#140f0e] border border-[#a55850]/40 px-2 py-0.5 rounded-full font-sans-persona">
+                <Lock className="w-2.5 h-2.5" /> Exclusivo
+              </span>
+            )}
             <span className="text-xs text-[#a89b97] flex items-center gap-1">
               <Clock className="w-3 h-3 text-[#b98d76]" /> {durationMinutes} min
             </span>
@@ -128,7 +141,7 @@ export function SessionCard({
 
   return (
     <div
-      onClick={handlePlayClick}
+      onClick={handleCardClick}
       className="group relative flex flex-col rounded-3xl bg-[#1e1716] hover:bg-[#251d1c] border border-[#3b2c29] hover:border-[#a55850]/50 overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#a55850]/10 cursor-pointer"
     >
       {/* Portada */}
@@ -136,7 +149,7 @@ export function SessionCard({
         {(session.imagen_url || session.url_imagen_portada) ? (
           <img
             src={session.imagen_url || session.url_imagen_portada || ''}
-            alt={session.titulo}
+            alt={sessionTitle}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
@@ -152,27 +165,53 @@ export function SessionCard({
           <span>{durationMinutes} min</span>
         </div>
 
-        {/* Botón Favorito en portada */}
-        <button
-          onClick={handleFavoriteClick}
-          className={`absolute top-3 right-3 p-2 rounded-full bg-[#140f0e]/70 backdrop-blur-md border border-[#3b2c29] transition-colors ${
-            isFavorited ? 'text-[#a55850]' : 'text-[#a89b97] hover:text-white'
-          }`}
-        >
-          <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
-        </button>
-
-        {/* Botón Play central en Hover o activo */}
-        <div
-          className={`absolute inset-0 flex items-center justify-center transition-all ${
-            isCurrentPlaying
-              ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100 bg-black/30'
-          }`}
-        >
-          <div className="w-13 h-13 rounded-2xl bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shadow-lg shadow-[#a55850]/40 transition-transform active:scale-95 group-hover:scale-110">
-            {isCurrentPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+        {/* Badge Exclusivo si no es reproducible */}
+        {!playable && (
+          <div className="absolute bottom-3 right-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#140f0e]/90 backdrop-blur-md text-[#d8aba1] text-[11px] font-medium border border-[#a55850]/40">
+            <Lock className="w-3 h-3 text-[#a55850]" />
+            <span>Membresía</span>
           </div>
+        )}
+
+        {/* Botón Favorito en portada (solo si es reproducible) */}
+        {playable && (
+          <button
+            onClick={handleFavoriteClick}
+            className={`absolute top-3 right-3 p-2 rounded-full bg-[#140f0e]/70 backdrop-blur-md border border-[#3b2c29] transition-colors ${
+              isFavorited ? 'text-[#a55850]' : 'text-[#a89b97] hover:text-white'
+            }`}
+          >
+            <Heart className={`w-4 h-4 ${isFavorited ? 'fill-current' : ''}`} />
+          </button>
+        )}
+
+        {/* Botón Play central en Hover o indicador de bloqueo si no es reproducible */}
+        <div
+          className={`absolute inset-0 flex flex-col items-center justify-center transition-all ${
+            playable
+              ? isCurrentPlaying
+                ? 'opacity-100'
+                : 'opacity-0 group-hover:opacity-100 bg-black/40'
+              : 'opacity-0 group-hover:opacity-100 bg-black/75 backdrop-blur-[2px]'
+          }`}
+        >
+          {playable ? (
+            <div className="w-13 h-13 rounded-2xl bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shadow-lg shadow-[#a55850]/40 transition-transform active:scale-95 group-hover:scale-110">
+              {isCurrentPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center p-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#1e1716] border border-[#a55850]/60 text-[#a55850] flex items-center justify-center shadow-xl mb-2 group-hover:scale-110 transition-transform">
+                <Lock className="w-5 h-5 text-[#b98d76]" />
+              </div>
+              <span className="text-xs font-medium text-[#fbf7f4]">
+                Audio Exclusivo
+              </span>
+              <span className="text-[11px] text-[#b98d76] mt-0.5 font-light">
+                Regístrate para escuchar
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

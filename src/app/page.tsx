@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Sparkles,
@@ -11,27 +11,34 @@ import {
   ShieldAlert,
   Lock,
   ArrowRight,
-  Play,
-  Pause,
   Headphones,
-  Wind,
   ShieldCheck,
   Quote,
   Feather,
-  Clock,
-  Compass
 } from 'lucide-react';
-import { MOCK_SESIONES } from '@/lib/data/mockData';
+import { Sesion } from '@/types/database';
+import { getSesiones } from '@/lib/services/contentService';
 import { SessionCard } from '@/components/sessions/SessionCard';
-import { usePlayer } from '@/context/PlayerContext';
 import { VSLPlayer } from '@/components/video/VSLPlayer';
 
 export default function LandingPage() {
-  const { currentSession, isPlaying, playSession, togglePlay } = usePlayer();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [sessions, setSessions] = useState<Sesion[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
 
-  const demoSampleSession = MOCK_SESIONES[0];
-  const isSamplePlaying = currentSession?.id === demoSampleSession.id && isPlaying;
+  useEffect(() => {
+    const fetchPublishedSessions = async () => {
+      try {
+        const data = await getSesiones();
+        setSessions(data);
+      } catch (err) {
+        console.warn('Error al cargar sesiones en la landing page:', err);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+    fetchPublishedSessions();
+  }, []);
 
   const faqs = [
     {
@@ -62,7 +69,7 @@ export default function LandingPage() {
       {/* 1. SECCIÓN HERO (El gancho dramático)                         */}
       {/* ------------------------------------------------------------- */}
       <section className="relative pt-16 pb-20 md:pt-28 md:pb-36 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full flex flex-col items-center text-center">
-        {/* Atmósfera de iluminación suave tras la tormenta (Colores Persona: Terracota & Sandstone) */}
+        {/* Atmósfera de iluminación suave tras la tormenta */}
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#a55850]/12 blur-[150px] rounded-full pointer-events-none" />
         <div className="absolute top-1/3 left-1/4 w-[380px] h-[380px] bg-[#b98d76]/10 blur-[130px] rounded-full pointer-events-none" />
 
@@ -72,7 +79,7 @@ export default function LandingPage() {
           <span className="tracking-wide">Tu refugio íntimo de paz mental y descanso profundo</span>
         </div>
 
-        {/* Título Principal Dramático con Tipografía Editorial Serif Playfair Display */}
+        {/* Título Principal */}
         <h1 className="font-serif-persona text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-normal text-[#fbf7f4] tracking-tight leading-[1.12] max-w-4xl">
           ¿Sientes que tu propia mente{' '}
           <span className="italic font-normal bg-gradient-to-r from-[#fbf7f4] via-[#d8aba1] to-[#b98d76] bg-clip-text text-transparent">
@@ -86,7 +93,7 @@ export default function LandingPage() {
           No tienes que seguir luchando solo. Es hora de recuperar el control.
         </p>
 
-        {/* Botones CTA estilo Persona */}
+        {/* Botones CTA */}
         <div className="flex flex-col sm:flex-row items-center gap-4 mt-10 w-full sm:w-auto">
           <Link
             href="/registro"
@@ -103,42 +110,8 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Micro-reproductor interactivo: Muestra de alivio inmediato */}
-        <div className="mt-14 w-full max-w-xl p-4 sm:p-5 rounded-3xl bg-[#1c1514]/90 border border-[#3b2c29] shadow-2xl backdrop-blur-md flex items-center justify-between gap-4 text-left transition-all hover:border-[#a55850]/40">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <button
-              onClick={() => {
-                if (isSamplePlaying) {
-                  togglePlay();
-                } else {
-                  playSession(demoSampleSession);
-                }
-              }}
-              className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center shrink-0 shadow-lg shadow-[#a55850]/30 transition-transform active:scale-95"
-              aria-label="Escuchar muestra gratuita"
-            >
-              {isSamplePlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
-            </button>
-            <div className="min-w-0">
-              <span className="text-[11px] font-semibold text-[#b98d76] uppercase tracking-wider flex items-center gap-1">
-                <Wind className="w-3 h-3 text-[#a55850]" /> Muestra de Calma Inmediata (60s)
-              </span>
-              <h4 className="font-serif-persona text-sm sm:text-base font-medium text-[#fbf7f4] truncate mt-0.5">
-                {demoSampleSession.titulo}
-              </h4>
-              <p className="text-xs text-[#a89b97] truncate">
-                Cierra los ojos, respira hondo y siente la liberación
-              </p>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-[#a89b97] shrink-0 px-3 py-1.5 rounded-full bg-[#140f0e] border border-[#3b2c29]">
-            <Headphones className="w-3.5 h-3.5 text-[#b98d76]" />
-            <span>Usar audífonos</span>
-          </div>
-        </div>
-
         {/* Sellos de tranquilidad */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-[#9c8e8a]">
+        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-[#9c8e8a]">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#b98d76]" />
             <span>100% Confidencial y Seguro</span>
@@ -173,7 +146,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Tres Tarjetas de Dolor Sentimental - Formato Persona Icon Box */}
+          {/* Tres Tarjetas de Dolor Sentimental */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {/* Tarjeta 1: Noches en Blanco */}
             <div className="group p-8 rounded-3xl bg-[#1e1716] border border-[#3b2c29] hover:border-[#a55850]/60 transition-all duration-300 flex flex-col justify-between shadow-xl relative overflow-hidden">
@@ -242,7 +215,7 @@ export default function LandingPage() {
       </section>
 
       {/* ------------------------------------------------------------- */}
-      {/* 3. CITA TERAPÉUTICA (Inspirada en el Counseling de Persona)    */}
+      {/* 3. CITA TERAPÉUTICA                                           */}
       {/* ------------------------------------------------------------- */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto text-center">
         <div className="p-8 sm:p-12 rounded-3xl bg-[#181211] border border-[#332623] relative">
@@ -277,7 +250,7 @@ export default function LandingPage() {
           </p>
         </div>
 
-        {/* Pilares de la Experiencia con la estética de Persona */}
+        {/* Pilares de la Experiencia */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
           <div className="p-7 rounded-3xl bg-[#1e1716] border border-[#3b2c29] flex items-start gap-4">
             <div className="w-12 h-12 rounded-2xl bg-[#a55850]/20 border border-[#a55850]/40 flex items-center justify-center text-[#a55850] shrink-0">
@@ -316,7 +289,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Catálogo de Muestra */}
+        {/* Catálogo Exclusivo Publicado en Firestore */}
         <div className="space-y-6">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#2d2220] pb-4">
             <div>
@@ -331,14 +304,46 @@ export default function LandingPage() {
               href="/registro"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-[#b98d76] hover:text-[#d8aba1] transition-colors"
             >
-              Explorar todo el catálogo <ArrowRight className="w-4 h-4" />
+              Acceder a todo el catálogo <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-            {MOCK_SESIONES.slice(0, 3).map((session) => (
-              <SessionCard key={session.id} session={session} />
-            ))}
+            {loadingSessions ? (
+              [1, 2, 3].map((n) => (
+                <div
+                  key={n}
+                  className="rounded-3xl bg-[#1e1716] border border-[#2d2220] p-4 space-y-3 animate-pulse"
+                >
+                  <div className="aspect-[16/10] bg-[#2d2220] rounded-2xl" />
+                  <div className="h-4 bg-[#2d2220] rounded w-3/4" />
+                  <div className="h-3 bg-[#2d2220] rounded w-1/2" />
+                </div>
+              ))
+            ) : sessions.length > 0 ? (
+              sessions.slice(0, 6).map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  playable={false}
+                />
+              ))
+            ) : (
+              <div className="col-span-full py-16 text-center text-xs text-[#a89b97] bg-[#1e1716] rounded-3xl border border-[#2d2220] space-y-2">
+                <p className="font-medium text-sm text-[#fbf7f4]">
+                  Catálogo en constante actualización
+                </p>
+                <p className="font-light max-w-sm mx-auto text-[#7d6f6b]">
+                  Regístrate hoy para acceder a las inducciones guiadas y nuevos audios agregados periódicamente.
+                </p>
+                <Link
+                  href="/registro"
+                  className="inline-block mt-3 px-5 py-2 rounded-full bg-[#a55850] text-white text-xs font-medium"
+                >
+                  Crear cuenta y comenzar
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
