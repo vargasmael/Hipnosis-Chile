@@ -3,7 +3,7 @@
 import React from 'react';
 import { Sesion } from '@/types/database';
 import { usePlayer } from '@/context/PlayerContext';
-import { History, Play, Pause, Clock } from 'lucide-react';
+import { History, Play, Pause, Clock, Volume2 } from 'lucide-react';
 
 interface ContinueListeningItem {
   session: Sesion;
@@ -54,7 +54,11 @@ export function ContinueListeningRow({ items }: ContinueListeningRowProps) {
             <div
               key={session.id}
               onClick={handlePlay}
-              className="group flex-shrink-0 w-72 sm:w-80 snap-start p-3.5 rounded-2xl bg-[#1e1716] hover:bg-[#251d1c] border border-[#3b2c29] hover:border-[#a55850]/50 transition-all duration-300 cursor-pointer shadow-lg shadow-black/20"
+              className={`group flex-shrink-0 w-72 sm:w-80 snap-start p-3.5 rounded-2xl bg-[#1e1716] hover:bg-[#251d1c] border transition-all duration-300 cursor-pointer shadow-lg shadow-black/20 ${
+                isCurrentPlaying
+                  ? 'border-[#a55850] shadow-[#a55850]/20'
+                  : 'border-[#3b2c29] hover:border-[#a55850]/50'
+              }`}
             >
               <div className="flex items-center gap-3.5">
                 {/* Portada Mini */}
@@ -71,19 +75,35 @@ export function ContinueListeningRow({ items }: ContinueListeningRowProps) {
                     </div>
                   )}
 
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="w-8 h-8 rounded-full bg-[#a55850] text-white flex items-center justify-center shadow">
-                      {isCurrentPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+                  <div
+                    className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
+                      isCurrentPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-[#a55850] text-white flex items-center justify-center shadow-md">
+                      {isCurrentPlaying ? (
+                        <Pause className="w-4 h-4 fill-current" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-semibold text-[#b98d76] uppercase tracking-wider block truncate">
-                    {session.categoria?.nombre || 'Bienestar'}
-                  </span>
-                  <h4 className="font-serif-persona text-sm text-[#fbf7f4] group-hover:text-[#d8aba1] truncate transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-semibold text-[#b98d76] uppercase tracking-wider block truncate">
+                      {session.categoria?.nombre || 'Bienestar'}
+                    </span>
+                    {isCurrentPlaying && (
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-[#a55850]">
+                        <Volume2 className="w-3 h-3 animate-pulse" />
+                        Sonando
+                      </span>
+                    )}
+                  </div>
+                  <h4 className="font-serif-persona text-sm text-[#fbf7f4] group-hover:text-[#d8aba1] truncate transition-colors mt-0.5">
                     {session.titulo}
                   </h4>
                   <p className="text-[11px] text-[#9c8e8a] truncate mt-0.5">

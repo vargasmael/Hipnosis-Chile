@@ -44,11 +44,15 @@ export default function BibliotecaPage() {
 
   const featuredSessions = sessions.filter((s) => s.destacado);
 
-  // Muestra de sesiones en progreso (por ejemplo si el usuario ya inició alguna)
-  const continueItems = sessions.slice(0, 2).map((session, index) => ({
-    session,
-    progressSeconds: index === 0 ? 420 : 180,
-  }));
+  // Sesiones para continuar escuchando con tiempos válidos dentro de la duración de cada audio
+  const continueItems = sessions.slice(0, 3).map((session, index) => {
+    const dur = session.duracion || 600;
+    const progress = Math.max(30, Math.min(Math.floor(dur * (index === 0 ? 0.35 : 0.2)), dur - 10));
+    return {
+      session,
+      progressSeconds: progress,
+    };
+  });
 
   const filteredSessions = sessions.filter((session) => {
     const matchesCategory = selectedCategory ? session.id_categoria === selectedCategory : true;

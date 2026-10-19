@@ -46,10 +46,14 @@ export default function DashboardPage() {
   const userName = user?.nombre_completo || user?.email?.split('@')[0] || 'Viajero';
   const featuredSessions = sessions.filter((s) => s.destacado);
 
-  const continueListeningItems = sessions.slice(0, 3).map((session, idx) => ({
-    session,
-    progressSeconds: [320, 540, 890][idx] || 300,
-  }));
+  const continueListeningItems = sessions.slice(0, 3).map((session, idx) => {
+    const dur = session.duracion || 600;
+    const progress = Math.max(30, Math.min(Math.floor(dur * (idx === 0 ? 0.35 : 0.2)), dur - 10));
+    return {
+      session,
+      progressSeconds: progress,
+    };
+  });
 
   return (
     <div className="min-h-screen pb-36 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-10 font-sans-persona">
