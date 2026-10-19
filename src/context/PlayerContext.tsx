@@ -136,11 +136,13 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const playSession = useCallback((session: Sesion, startTime: number = 0) => {
     if (!audioRef.current) return;
 
-    const isSameSession = currentSession?.id === session.id;
+    const audioSource = session.audio_url || session.url_archivo_multimedia || '';
+    const isSameSession =
+      currentSession?.id === session.id &&
+      audioRef.current.src === audioSource;
 
     if (!isSameSession) {
       setCurrentSession(session);
-      const audioSource = session.audio_url || session.url_archivo_multimedia;
       audioRef.current.src = audioSource;
       audioRef.current.load();
       if (startTime > 0) {
@@ -152,7 +154,11 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     }
 
     audioRef.current.play().catch((err) => {
-      console.warn('Autoplay bloqueado por el navegador:', err);
+      console.warn('Autoplay bloqueado por el navegador o requiere interacción:', err);
+      if (audioRef.current) {
+        audioRef.current.load();
+        audioRef.current.play().catch(() => {});
+      }
     });
     setIsPlaying(true);
   }, [currentSession]);
@@ -164,6 +170,10 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     } else {
       audioRef.current.play().catch((err) => {
         console.warn('Reproducción bloqueada:', err);
+        if (audioRef.current) {
+          audioRef.current.load();
+          audioRef.current.play().catch(() => {});
+        }
       });
     }
   }, [isPlaying]);

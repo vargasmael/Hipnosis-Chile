@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { normalizeFirestoreSesion } from '@/lib/services/contentService';
 import { Sesion } from '@/types/database';
+import { usePlayer } from '@/context/PlayerContext';
 import {
   Play,
   Pause,
@@ -18,9 +19,10 @@ import {
   VolumeX,
   Sparkles,
   Headphones,
-  Moon,
   Feather,
-  AlertCircle
+  AlertCircle,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 
 function formatTime(seconds: number): string {
@@ -37,6 +39,7 @@ export default function SesionPlayerPage({
 }) {
   const { id: sessionId } = use(params);
   const router = useRouter();
+  const { closePlayer } = usePlayer();
 
   // Estados de datos
   const [session, setSession] = useState<Sesion | null>(null);
@@ -46,11 +49,18 @@ export default function SesionPlayerPage({
   // Estados del Reproductor
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isAudioBuffering, setIsAudioBuffering] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isFavorited, setIsFavorited] = useState(false);
+
+  // Detener el reproductor flotante global al entrar a la página individual
+  useEffect(() => {
+    closePlayer();
+  }, [closePlayer]);
 
   // 1. Fetching de Firestore: Obtener la sesión por su ID con try/catch
   useEffect(() => {
@@ -100,7 +110,19 @@ export default function SesionPlayerPage({
     };
   }, [sessionId]);
 
-  // 4. Media Session API (CRÍTICO): background playback y control en pantalla de bloqueo
+  const audioSrc =
+    session?.audio_url ||
+    session?.url_archivo_multimedia ||
+    '';
+
+  // Forzar carga de audio cuando cambie audioSrc
+  useEffect(() => {
+    if (audioRef.current && audioSrc) {
+      audioRef.current.load();
+    }
+  }, [audioSrc]);
+
+  // Media Session API para background playback y pantalla de bloqueo
   useEffect(() => {
     if (typeof window === 'undefined' || !('mediaSession' in navigator) || !session) {
       return;
@@ -113,7 +135,7 @@ export default function SesionPlayerPage({
 
     navigator.mediaSession.metadata = new MediaMetadata({
       title: session.titulo,
-      artist: 'Re-Programa',
+      artist: session.guia_o_autor || 'Re-Programa',
       album: session.categoria?.nombre || 'Terapia & Reprogramación',
       artwork: [
         { src: artworkUrl, sizes: '96x96', type: 'image/jpeg' },
@@ -196,15 +218,40 @@ export default function SesionPlayerPage({
     }
   }, [isPlaying]);
 
-  // 3. Controles Nativos JS vinculados a la referencia de Audio (useRef)
-  const togglePlay = () => {
+  // Controles Nativos JS vinculados a la referencia de Audio
+  const togglePlay = async () => {
     if (!audioRef.current) return;
+    setAudioError(null);
+
     if (audioRef.current.paused) {
-      audioRef.current.play().catch((err) => {
-        console.warn('Error de reproducción:', err);
-      });
+      try {
+        setIsAudioBuffering(true);
+        await audioRef.current.play();
+        setIsPlaying(true);
+      } catch (err: any) {
+        console.warn('Fallo en reproducción inicial, reintentando con load():', err);
+        try {
+          if (audioRef.current) {
+            audioRef.current.load();
+            await audioRef.current.play();
+            setIsPlaying(true);
+            setAudioError(null);
+          }
+        } catch (retryErr: any) {
+          console.error('Error definitivo al reproducir audio:', retryErr);
+          setIsPlaying(false);
+          setAudioError(
+            retryErr?.name === 'NotAllowedError'
+              ? 'El navegador pausó la reproducción automática. Haz clic de nuevo para autorizar el audio.'
+              : 'Error al iniciar la reproducción. Por favor presiona "Reintentar".'
+          );
+        }
+      } finally {
+        setIsAudioBuffering(false);
+      }
     } else {
       audioRef.current.pause();
+      setIsPlaying(false);
     }
   };
 
@@ -259,12 +306,12 @@ export default function SesionPlayerPage({
     }
   };
 
-  // Estado de Carga Elegante
+  // Estado de Carga
   if (loading) {
     return (
       <div className="min-h-screen bg-[#140f0e] text-[#ece5e2] flex flex-col items-center justify-center p-6 space-y-6 font-sans-persona">
         <div className="relative w-64 h-64 sm:w-80 sm:h-80 rounded-3xl bg-[#1e1716] border border-[#2d2220] animate-pulse flex items-center justify-center shadow-2xl">
-          <Sparkles className="w-12 h-12 text-[#a55850] animate-spin-slow opacity-60" />
+          <Sparkles className="w-12 h-12 text-[#a55850] opacity-60 animate-spin" />
         </div>
         <div className="space-y-2 text-center max-w-sm">
           <div className="h-6 w-48 bg-[#1e1716] rounded-full mx-auto animate-pulse" />
@@ -300,20 +347,29 @@ export default function SesionPlayerPage({
     session.url_imagen_portada ||
     'https://images.unsplash.com/photo-1518241353330-0f7941c2d9b5?auto=format&fit=crop&w=800&q=80';
 
-  const audioSrc =
-    session.audio_url ||
-    session.url_archivo_multimedia ||
-    'https://cdn.freesound.org/previews/557/557194_11861866-lq.mp3';
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#181211] via-[#140f0e] to-[#0d0a09] text-[#fbf7f4] flex flex-col justify-between py-6 px-4 sm:px-8 max-w-4xl mx-auto w-full font-sans-persona selection:bg-[#a55850]/40">
-      {/* 2. Elemento de Audio Oculto */}
+      {/* Elemento de Audio HTML5 (usa sr-only en vez de hidden para evitar throttling de navegadores) */}
       <audio
+        key={audioSrc}
         ref={audioRef}
         src={audioSrc}
         preload="auto"
-        onPlay={() => setIsPlaying(true)}
+        playsInline
+        crossOrigin="anonymous"
+        onPlay={() => {
+          setIsPlaying(true);
+          setIsAudioBuffering(false);
+          setAudioError(null);
+        }}
         onPause={() => setIsPlaying(false)}
+        onWaiting={() => setIsAudioBuffering(true)}
+        onCanPlay={() => setIsAudioBuffering(false)}
+        onPlaying={() => {
+          setIsPlaying(true);
+          setIsAudioBuffering(false);
+          setAudioError(null);
+        }}
         onTimeUpdate={() => {
           if (audioRef.current) {
             setCurrentTime(audioRef.current.currentTime);
@@ -328,7 +384,13 @@ export default function SesionPlayerPage({
           setIsPlaying(false);
           setCurrentTime(0);
         }}
-        className="hidden"
+        onError={(e) => {
+          setIsPlaying(false);
+          setIsAudioBuffering(false);
+          console.error('Error en elemento de audio HTML5:', e, audioRef.current?.error);
+          setAudioError('Error al cargar el archivo de audio. Verifica que tu conexión esté activa.');
+        }}
+        className="sr-only"
       />
 
       {/* Barra Superior Minimalista */}
@@ -374,12 +436,12 @@ export default function SesionPlayerPage({
             />
             {/* Overlay sutil de viñeta */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-            
+
             {/* Badge de Terapeuta sobre la imagen */}
             <div className="absolute bottom-3.5 left-4 right-4 flex items-center justify-between text-[11px] text-[#d8aba1]">
               <span className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
                 <Headphones className="w-3 h-3 text-[#b98d76]" />
-                {session.guia_o_autor || 'Dra. Valentina Montes'}
+                {session.guia_o_autor || 'Terapeuta Marco A. Vargas'}
               </span>
               <span className="bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[#ece5e2]">
                 {session.categoria?.nombre || 'Hipnosis Terapéutica'}
@@ -400,6 +462,22 @@ export default function SesionPlayerPage({
           )}
         </div>
 
+        {/* Alerta de Error de Audio con botón Reintentar si falla */}
+        {audioError && (
+          <div className="w-full p-3.5 rounded-2xl bg-red-950/40 border border-red-800/60 text-red-200 text-xs flex items-center justify-between gap-3 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{audioError}</span>
+            </div>
+            <button
+              onClick={togglePlay}
+              className="shrink-0 flex items-center gap-1 px-3 py-1 rounded-full bg-red-800 hover:bg-red-700 text-white font-medium text-[11px] transition-colors cursor-pointer"
+            >
+              <RefreshCw className="w-3 h-3" /> Reintentar
+            </button>
+          </div>
+        )}
+
         {/* Barra de Progreso y Tiempos */}
         <div className="w-full space-y-2 pt-2">
           <div className="relative flex items-center">
@@ -418,7 +496,7 @@ export default function SesionPlayerPage({
           </div>
         </div>
 
-        {/* 2. Controles Circulares Minimalistas */}
+        {/* Controles Circulares Minimalistas */}
         <div className="flex items-center justify-center gap-6 sm:gap-8 pt-2">
           {/* Salto -15 Segundos */}
           <button
@@ -435,10 +513,13 @@ export default function SesionPlayerPage({
           {/* Botón Central de Play / Pause */}
           <button
             onClick={togglePlay}
-            className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-2xl shadow-[#a55850]/40 border-2 border-[#d8aba1]/30 cursor-pointer"
+            disabled={isAudioBuffering}
+            className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-[#a55850] hover:bg-[#b8665d] text-white flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-2xl shadow-[#a55850]/40 border-2 border-[#d8aba1]/30 cursor-pointer disabled:opacity-80"
             title={isPlaying ? 'Pausar' : 'Reproducir'}
           >
-            {isPlaying ? (
+            {isAudioBuffering ? (
+              <Loader2 className="w-8 h-8 animate-spin" />
+            ) : isPlaying ? (
               <Pause className="w-8 h-8 fill-current" />
             ) : (
               <Play className="w-8 h-8 fill-current ml-1" />
@@ -472,19 +553,17 @@ export default function SesionPlayerPage({
 
           <button
             onClick={cyclePlaybackRate}
-            className="hover:text-[#fbf7f4] px-2 py-0.5 rounded-md border border-[#2d2220] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 hover:text-[#fbf7f4] transition-colors cursor-pointer font-mono"
+            title="Cambiar velocidad de reproducción"
           >
-            Velocidad: <strong>{playbackRate}x</strong>
+            <span>{playbackRate}x</span>
           </button>
         </div>
       </main>
 
-      {/* Pie de Página: Indicador de Fondo & Salud Mental */}
-      <footer className="pb-4 pt-6 border-t border-[#2d2220]/60 max-w-lg mx-auto w-full text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-[#a89b97] font-light bg-[#1e1716]/60 px-4 py-2 rounded-full border border-[#3b2c29]/50">
-          <Moon className="w-3.5 h-3.5 text-[#b98d76]" />
-          <span>Reproducción continua con celular bloqueado y pantalla apagada</span>
-        </div>
+      {/* Pie de Página */}
+      <footer className="text-center py-2 text-[11px] text-[#7d6f6b]">
+        Re-Programa • Frecuencias e Inducciones Guiadas
       </footer>
     </div>
   );

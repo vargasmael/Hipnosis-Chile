@@ -952,7 +952,9 @@ export default function AdminSesionesPage() {
                         </a>
                       </div>
                       <audio
+                        key={editExistingAudioUrl}
                         controls
+                        preload="metadata"
                         src={editExistingAudioUrl}
                         className="w-full h-8 opacity-80"
                       />
